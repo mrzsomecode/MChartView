@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#FF4081</color>
+    <color name="app_main_color">#1798ff</color>
+    <color name="fourth_text_color">#465670</color>
+
+    <color name="rightColor">#aa1798FF</color>
+    <color name="leftColor">#aaF46D72</color>
+    <color name="selectRightColor">#ff1798FF</color>
+    <color name="selectLeftColor">#ffF46D72</color>
+    <color name="rado_color1">#901df1</color>
+    <color name="rado_color2">#1663ff</color>
+</resources>

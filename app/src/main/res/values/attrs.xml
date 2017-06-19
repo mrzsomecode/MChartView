@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="MyChartView">
+        <attr name="lableColor" format="color"/>
+        <attr name="chartWidth" format="dimension"/>
+        <attr name="chartItemWidth" format="dimension"/>
+        <attr name="chartItemSpace" format="dimension"/>
+        <attr name="chartTextSize" format="dimension"/>
+        <attr name="radoRadius" format="dimension"/>
+    </declare-styleable>
+</resources>
