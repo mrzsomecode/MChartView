@@ -204,7 +204,14 @@ public class RadoView extends BaseChartView<ChartBean> {
         float maxCount = trueWidth / maxBottomWidth;
         if (maxCount >= 4) maxCount = 4;
         else maxCount = (float) Math.floor(maxCount);
-        float btnItemWidth = (trueWidth / maxCount);
+        //底部描述参数
+        //小于就是第一行
+        float bottomChartWidth = mPaint.measureText("5") + bottomNumberPadding;
+        float leftBottomWidth = mPaint.measureText(bottomExplainStr[0]) + bottomChartWidth;
+        float rightBottomWidth = bottomExplainStr.length > 3 ? mPaint.measureText(bottomExplainStr[3]) + bottomChartWidth : leftBottomWidth;
+        float bottomItemW = 0;
+        float btStartX = getPaddingLeft();
+        float bottomStartY = centerY + radius + textHeight * 2;
         int i = 0;
         for (ChartBean bean : item) {
             mPaint.setTextSize(textSize);
@@ -227,34 +234,42 @@ public class RadoView extends BaseChartView<ChartBean> {
             } else if (curA <= 0 && curA > -Math.PI / 2) {//第1象限
                 canvas.drawText(key, x + itemSpace, y, mPaint);
             }
-            //画底部描述
             //底部文字的宽度
             float bottomStrWidth = mPaint.measureText(bottomExplainStr[i]);
-            //小于就是第一行
-            float bottomChartWidth = mPaint.measureText("5") + bottomNumberPadding;
-            float bottomItemW = bottomStrWidth + bottomChartWidth + 15;
-            float centerOffsetX = (btnItemWidth - bottomItemW) / 2;
-            float btStartX = 0;
-            float bottomStartY = 0;
-            if (i < maxCount) {
-                btStartX = getPaddingLeft() + i * btnItemWidth + centerOffsetX;
-                bottomStartY = centerY + radius + textHeight * 2;
-            } else {
-                btStartX = getPaddingLeft() + (i - maxCount) * btnItemWidth + centerOffsetX;
-                bottomStartY = centerY + radius + textHeight * 4;
+            float offset = 0;
+            switch ((int) ((i + 1) % maxCount)) {
+                case 1:
+                    //第一个 靠左,startX不变，有多宽占多宽
+                    bottomItemW = leftBottomWidth;
+                    break;
+                //中间2个 居中
+                case 2:
+                    bottomItemW = (trueWidth - leftBottomWidth - rightBottomWidth) / 2;
+                    offset = ((bottomItemW - bottomStrWidth - bottomChartWidth) / 2) * (4 / 3f);
+                    break;
+                case 3:
+                    bottomItemW = (trueWidth - leftBottomWidth - rightBottomWidth) / 2;
+                    offset = ((bottomItemW - bottomStrWidth - bottomChartWidth) / 2) * (2 / 3f);
+                    break;
+                //最后一个 靠右，有多宽占多宽
+                case 0:
+                    bottomItemW = rightBottomWidth;
+                    break;
             }
-            //第一个左对齐
-            if ((i + 1) % maxCount == 1) {
-                btStartX -= centerOffsetX;
-            } else if ((i + 1) % maxCount == 0) {
-                //最后一个右对齐
-                btStartX += centerOffsetX;
+            //换行了
+            if (i + 1 > maxCount) {
+                btStartX -= trueWidth;
+                bottomStartY += textHeight * 2;
+                maxCount += maxCount;
             }
             mChartPaint.setColor(getResources().getColor(R.color.app_main_color));
-            drawChart(btStartX, btStartX + bottomChartWidth, bottomStartY + 2, 5, textHeight + 4, 1f, canvas);
-            canvas.drawText(bottomExplainStr[i], btStartX + bottomChartWidth + 15, bottomStartY - mPaint.descent() / 2, mPaint);
+            float curStartX = btStartX + offset;
+            drawChart(curStartX, curStartX + bottomChartWidth, bottomStartY + 2, 5, textHeight + 4, 1f, canvas);
+            canvas.drawText(bottomExplainStr[i], curStartX + bottomChartWidth + bottomNumberPadding,
+                    bottomStartY - mPaint.descent() / 2, mPaint);
             mPaint.setColor(Color.WHITE);
-            canvas.drawText((i + 1) + "", btStartX + (bottomChartWidth - mPaint.measureText(i + "")) / 2, bottomStartY - mPaint.descent() / 2, mPaint);
+            canvas.drawText((i + 1) + "", curStartX + (bottomChartWidth - mPaint.measureText(i + "")) / 2, bottomStartY - mPaint.descent() / 2, mPaint);
+            btStartX += bottomItemW;
             i++;
         }
     }
