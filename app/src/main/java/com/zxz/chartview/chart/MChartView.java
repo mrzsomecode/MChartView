@@ -2,6 +2,7 @@ package com.zxz.chartview.chart;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
@@ -17,25 +18,12 @@ import java.util.List;
  * Created by Administrator on 2017/6/9.
  */
 public class MChartView extends BaseChartView<ChartBean> {
-    //左
-    private int leftColor;
-    private int selectLeftColor;
-    //右
-    private int rightColor;
-    private int selectRightColor;
-
-    //最大值 默认100
-    private int leftMaxValue = 100;
-    private int rightMaxValue = 100;
-    //间隔
-    private int lefrInterval = 25;
-    private int rightInterval = 25;
 
     public float chartHeight;
     //左边刻度最大宽度
     public float leftMaxW;
     //右边刻度最大宽度
-    public float rightMaxW;
+    public float rightMaxW = 0;
 
     //超出显示的宽度,最大滑动宽度
     private int outWidth;
@@ -67,32 +55,28 @@ public class MChartView extends BaseChartView<ChartBean> {
 
     @Override
     public void setDatas(List<ChartBean> datas) {
-        leftColor = getResources().getColor(datas.get(0).getChildDatas().get(0).getColor());
-        selectLeftColor = getResources().getColor(datas.get(0).getChildDatas().get(0).getClickColor());
-        rightColor = getResources().getColor(datas.get(0).getChildDatas().get(1).getColor());
-        selectRightColor = getResources().getColor(datas.get(0).getChildDatas().get(1).getClickColor());
         super.setDatas(datas);
     }
 
     //计算最大刻度，刻度之间的间距Value,centerOffset
     protected void initMax() {
-        leftMaxValue = 100;
-        rightMaxValue = 100;
+        int size = datas.get(0).getChildDatas().size();
+        maxValue = new int[size];
+        interval = new int[size];
         for (int i = 0; i < datas.size(); i++) {
             ChartBean item = datas.get(i);
             //计算最大文字的宽度 作为每个item的宽度
             itemWidth = (int) Math.max(itemWidth, mPaint.measureText(item.lable));
-            leftMaxValue = Math.max(leftMaxValue, item.getChildDatas().get(0).getValue());
-            rightMaxValue = Math.max(rightMaxValue, item.getChildDatas().get(1).getValue());
+            for (int j = 0; j < datas.get(i).getChildDatas().size(); j++) {
+                maxValue[j] = Math.max(maxValue[j], item.getChildDatas().get(j).getValue());
+            }
         }
-        int[] temp = new int[]{0, leftMaxValue};
-        resetMax(temp);
-        lefrInterval = temp[0];
-        leftMaxValue = temp[1];
-        temp = new int[]{0, rightMaxValue};
-        resetMax(temp);
-        rightInterval = temp[0];
-        rightMaxValue = temp[1];
+        for (int i = 0; i < maxValue.length; i++) {
+            int[] temp = new int[]{0, maxValue[i]};
+            resetMax(temp);
+            interval[i] = temp[0];
+            maxValue[i] = temp[1];
+        }
     }
 
     public MChartView(Context context) {
@@ -113,11 +97,11 @@ public class MChartView extends BaseChartView<ChartBean> {
         //底部预留文字的高度
         startY = getHeight() - getPaddingBottom() - textSize - 20;
         //坐标预留刻度(最大值)的宽度
-        startX = mPaint.measureText(leftMaxValue + "") + getPaddingLeft();
+        startX = mPaint.measureText(maxValue[0] + "") + getPaddingLeft();
         //图形能用的最大高度
         chartHeight = startY - textSize - getPaddingTop();
-        leftMaxW = mPaint.measureText(leftMaxValue + "");
-        rightMaxW = mPaint.measureText(rightMaxValue + "");
+        leftMaxW = mPaint.measureText(maxValue[0] + "");
+        rightMaxW = maxValue.length > 1 ? mPaint.measureText(maxValue[1] + "") : 0;
         super.onDraw(canvas);
     }
 
@@ -199,11 +183,12 @@ public class MChartView extends BaseChartView<ChartBean> {
                     startY + 15 + textSize, mPaint);
             int childsCount = item.getChildDatas().size();
             for (int j = 0; j < childsCount; j++) {
-                changeChartColor(j, i);
+                ChartBean child = item.getChildDatas().get(j);
+                changeColor(mChartPaint, child, i);
                 //居中显示，每个小图形间距 5
                 float childLeft = chartStartX + ((itemWidth - chartWidth) / 2) + chartWidth / childsCount * j + 5 * j;
                 float childRight = childLeft + chartWidth / childsCount;
-                float height = ((item.getChildDatas().get(j).getValue() * 1.0f) / (j % 2 == 0 ? leftMaxValue : rightMaxValue) * chartHeight);
+                float height = ((child.getValue() * 1.0f) / maxValue[j] * chartHeight);
                 drawChart(childLeft, childRight, startY, 14, height, animationValue, canvas);
             }
             chartStartX += itemSpace + itemWidth;
@@ -223,14 +208,15 @@ public class MChartView extends BaseChartView<ChartBean> {
             float descibeTextValue;
             //左上角描述
             for (int i = 0; i < datas.get(0).getChildDatas().size(); i++) {
-                descibeTextValue = (i % 2 == 0 ? leftMaxValue : rightMaxValue) * (descibeTextHeight / chartHeight);
-                changeChartColor(i, selectIndex);
-                changeTextColor(i, selectIndex);
-                float height = (descibeTextValue / (i % 2 == 0 ? leftMaxValue : rightMaxValue) * chartHeight);
+                ChartBean child = datas.get(0).getChildDatas().get(i);
+                descibeTextValue = maxValue[i] * (descibeTextHeight / chartHeight);
+                mChartPaint.setColor(getResources().getColor(child.getClickColor()));
+                mPaint.setColor(getResources().getColor(child.getClickColor()));
+                float height = (descibeTextValue / maxValue[i] * chartHeight);
                 drawChart(describeTextStartX, describeTextStartX + 15, tTop + descibeTextHeight + mPaint.descent() / 2, 4,
                         height, animationValue, canvas);
-                canvas.drawText(datas.get(0).getChildDatas().get(i).lable, describeTextStartX + 25, (tTop + descibeTextHeight), mPaint);
-                describeTextStartX += mPaint.measureText(datas.get(0).getChildDatas().get(i).lable) + 50;
+                canvas.drawText(child.lable, describeTextStartX + 25, (tTop + descibeTextHeight), mPaint);
+                describeTextStartX += mPaint.measureText(child.lable) + 50;
             }
         }
         //Y轴
@@ -242,17 +228,17 @@ public class MChartView extends BaseChartView<ChartBean> {
         for (int i = 0; i < lineCount; i++) {
             //画横向刻度数字
             float curY = (startY - ((chartHeight - describeTextPadding - mPaint.descent()) / (lineCount - 1) * i));
-            String leftIndex = lefrInterval * i + "";
+            String leftIndex = interval[0] * i + "";
             //左刻度
-            mPaint.setColor(selectLeftColor);
+            mPaint.setColor(getResources().getColor(datas.get(0).getChildDatas().get(0).getClickColor()));
             canvas.drawText(leftIndex, getPaddingLeft() + ((leftMaxW - mPaint.measureText(leftIndex)) / 2), curY + (textSize - 5) / 3, mPaint);
-            String rightIndex = rightInterval * i + "";
-            //右刻度
-            mPaint.setColor(selectRightColor);
-            canvas.drawText(rightIndex, mWidth + getPaddingLeft() - rightMaxW +
-                            ((rightMaxW - mPaint.measureText(rightIndex)) / 2),
-                    curY + (textSize - 5) / 3, mPaint);
-
+            if (rightMaxW > 0) {
+                String rightIndex = interval[1] * i + "";
+                //右刻度
+                mPaint.setColor(getResources().getColor(datas.get(0).getChildDatas().get(1).getClickColor()));
+                canvas.drawText(rightIndex, mWidth + getPaddingLeft() - rightMaxW +
+                        ((rightMaxW - mPaint.measureText(rightIndex)) / 2), curY + (textSize - 5) / 3, mPaint);
+            }
             //x轴,刻度
             mPaint.setColor(lineColor);
             drawDashed(canvas, startX, getWidth() - getPaddingRight() - rightMaxW, curY, curY);
@@ -270,31 +256,24 @@ public class MChartView extends BaseChartView<ChartBean> {
         canvas.drawPath(path, mPaint);
     }
 
-    private void changeChartColor(int childIndex, int itemIndex) {
-        if (childIndex % 2 == 0)
-            mChartPaint.setColor(selectIndex == itemIndex ? selectLeftColor : leftColor);
-        else
-            mChartPaint.setColor(selectIndex == itemIndex ? selectRightColor : rightColor);
+    private void changeColor(Paint paint, ChartBean child, int i) {
+        paint.setColor(getResources().getColor(selectIndex == i ? child.getClickColor() : child.getColor()));
     }
 
-    private void changeTextColor(int childIndex, int itemIndex) {
-        if (childIndex % 2 == 0)
-            mPaint.setColor(selectIndex == itemIndex ? selectLeftColor : leftColor);
-        else
-            mPaint.setColor(selectIndex == itemIndex ? selectRightColor : rightColor);
-    }
-
-    /**
-     * 画柱状图
-     */
-//    private void drawChart(float left, float right, float bottom, float corner, float value, int index, Canvas canvas) {
-//        RectF rectF = new RectF();
-//        rectF.left = left;
-//        rectF.right = right;
-//        rectF.bottom = bottom;
-//        rectF.top = bottom - (value / (index % 2 == 0 ? leftMaxValue : rightMaxValue) * chartHeight * animationValue);
-//        canvas.drawRoundRect(rectF, corner, corner, mChartPaint);
+//    private void changeChartColor(int childIndex, int itemIndex) {
+//        if (childIndex % 2 == 0)
+//            mChartPaint.setColor(selectIndex == itemIndex ? selectLeftColor : leftColor);
+//        else
+//            mChartPaint.setColor(selectIndex == itemIndex ? selectRightColor : rightColor);
 //    }
+
+//    private void changeTextColor(int childIndex, int itemIndex) {
+//        if (childIndex % 2 == 0)
+//            mPaint.setColor(selectIndex == itemIndex ? selectLeftColor : leftColor);
+//        else
+//            mPaint.setColor(selectIndex == itemIndex ? selectRightColor : rightColor);
+//    }
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);

@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
         for (int i = 0; i < titles1.length; i++) {
             ArrayList<ChartBean> child = new ArrayList<>();
             child.add(new ChartBean(titles2[0], defLeftColor, defLeftSelectedColor, random.nextInt(1000)));
-            child.add(new ChartBean(titles2[1], defRightColor, defRightSelectedColor, random.nextInt(1000)));
+//            child.add(new ChartBean(titles2[1], defRightColor, defRightSelectedColor, random.nextInt(1000)));
             datas.add(new ChartBean(titles1[i], child));
         }
         for (int i = 0; i < radoColors.length; i++) {
