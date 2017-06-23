@@ -3,7 +3,6 @@ package com.zxz.chartview.chart;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
@@ -246,33 +245,10 @@ public class MChartView extends BaseChartView<ChartBean> {
         mPaint.setTextSize(textSize);
     }
 
-    /**
-     * 画虚线
-     */
-    private void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY) {
-        Path path = new Path();
-        path.moveTo(startX, startY);
-        path.lineTo(endX, endY);
-        canvas.drawPath(path, mPaint);
-    }
 
     private void changeColor(Paint paint, ChartBean child, int i) {
         paint.setColor(getResources().getColor(selectIndex == i ? child.getClickColor() : child.getColor()));
     }
-
-//    private void changeChartColor(int childIndex, int itemIndex) {
-//        if (childIndex % 2 == 0)
-//            mChartPaint.setColor(selectIndex == itemIndex ? selectLeftColor : leftColor);
-//        else
-//            mChartPaint.setColor(selectIndex == itemIndex ? selectRightColor : rightColor);
-//    }
-
-//    private void changeTextColor(int childIndex, int itemIndex) {
-//        if (childIndex % 2 == 0)
-//            mPaint.setColor(selectIndex == itemIndex ? selectLeftColor : leftColor);
-//        else
-//            mPaint.setColor(selectIndex == itemIndex ? selectRightColor : rightColor);
-//    }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {

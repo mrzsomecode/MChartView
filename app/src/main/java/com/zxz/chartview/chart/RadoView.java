@@ -13,11 +13,15 @@ import android.util.AttributeSet;
 import android.view.View;
 
 import com.zxz.chartview.R;
+import com.zxz.chartview.chart.path.ArcPath;
+import com.zxz.chartview.chart.path.BasePath;
+import com.zxz.chartview.chart.path.LinePath;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 雷达图 支持图形直边和弧边
  * Created by Administrator on 2017/6/14.
  */
 
@@ -40,6 +44,18 @@ public class RadoView extends BaseChartView<ChartBean> {
     private float maxBottomWidth = 0;
     private float bottomNumberPadding = 14;
     private float textHeight = 0;
+
+    @BasePath.RegioPath
+    private int regionPath = BasePath.LINE;
+
+    /**
+     * {@link BasePath#LINE,BasePath#ARC}
+     *
+     * @param pathType
+     */
+    public void setRegioPath(@BasePath.RegioPath int pathType) {
+        this.regionPath = pathType;
+    }
 
     @Override
     public void setDatas(List<ChartBean> datas) {
@@ -166,16 +182,6 @@ public class RadoView extends BaseChartView<ChartBean> {
     }
 
     /**
-     * 画刻度尺
-     */
-    private void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY) {
-        Path path = new Path();
-        path.moveTo(startX, startY);
-        path.lineTo(endX, endY);
-        canvas.drawPath(path, mPaint);
-    }
-
-    /**
      * 绘制直线
      */
     private void drawLines(Canvas canvas, int i) {
@@ -286,28 +292,17 @@ public class RadoView extends BaseChartView<ChartBean> {
      * @param item
      */
     private void drawRegion(Canvas canvas, ArrayList<ChartBean> item) {
-        Path path = new Path();
-        path.reset();
-        int i = 0;
-        float startX = 0;
-        float startY = 0;
-
-        for (ChartBean bean : item) {
-            double percent = bean.getValue() / (maxValue[0] * 1.0);
+        BasePath path;
+        if (regionPath == BasePath.LINE) {
+            path = new LinePath();
+        } else {
+            path = new ArcPath(centerX, centerY, angle);
+        }
+        for (int i = 0; i < item.size(); i++) {
+            double percent = item.get(i).getValue() / (maxValue[0] * 1.0);
             float x = (float) (centerX + radius * Math.cos(getAngle(i)) * percent * animationValue);
             float y = (float) (centerY + radius * Math.sin(getAngle(i)) * percent * animationValue);
-            if (i == 0) {
-                startX = x;
-                startY = y;
-                path.moveTo(x, y);
-            } else {
-                path.lineTo(x, y);
-            }
-            i++;
-            //最后一个要跟第一个点连接起来
-            if (i == item.size()) {
-                path.lineTo(startX, startY);
-            }
+            path.draw(x, y, i + 1, item.size(), canvas);
         }
         canvas.drawPath(path, mChartPaint);
     }

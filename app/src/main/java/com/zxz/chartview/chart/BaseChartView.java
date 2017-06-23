@@ -7,11 +7,11 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PathEffect;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
@@ -20,6 +20,7 @@ import com.zxz.chartview.R;
 import java.util.List;
 
 /**
+ * 基类，理论上支持扩展,还有待优化，扩展性不好，可能扩展起来比较麻烦
  * Created by Administrator on 2017/6/15.
  */
 
@@ -91,7 +92,6 @@ public abstract class BaseChartView<T extends ICharData> extends View {
                 result[1] = Math.max(result[1], value.getValue());
             }
         }
-        Log.e(TAG, "initMax: " + result[1]);
         resetMax(result);
         interval[0] = result[0];
         maxValue[0] = result[1];
@@ -122,8 +122,18 @@ public abstract class BaseChartView<T extends ICharData> extends View {
         rectF.left = left;
         rectF.right = right;
         rectF.bottom = bottom;
-        rectF.top = bottom - (height* animationValue);
+        rectF.top = bottom - (height * animationValue);
         canvas.drawRoundRect(rectF, corner, corner, mChartPaint);
+    }
+
+    /**
+     * 画虚线
+     */
+    protected void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY) {
+        Path path = new Path();
+        path.moveTo(startX, startY);
+        path.lineTo(endX, endY);
+        canvas.drawPath(path, mPaint);
     }
 
     //动画效果
