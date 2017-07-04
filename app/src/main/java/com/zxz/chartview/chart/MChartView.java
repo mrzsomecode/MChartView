@@ -69,9 +69,9 @@ public class MChartView extends BaseChartView<ChartBean> {
         //坐标预留刻度(最大值)的宽度
         startX = leftMaxW + 5 + getPaddingLeft();
         //图形能用的最大高度
-        chartHeight = startY - (textSize - 5) - describeTextPadding - getPaddingTop();
+        chartHeight = startY - getPaddingTop();
         if (showTopDescribe)
-            chartHeight -= textSize;
+            chartHeight -= (textSize - 5 + describeTextPadding);
         super.onDraw(canvas);
     }
 
@@ -132,7 +132,7 @@ public class MChartView extends BaseChartView<ChartBean> {
     protected void drawContent(Canvas canvas) {
         float cw = (float) Math.ceil((mWidth - leftMaxW - 5 - datas.size() * itemWidth));
         float space = cw / (datas.size() + 1);
-        itemSpace = space > itemSpace ?  space : itemSpace;
+        itemSpace = space > itemSpace ? space : itemSpace;
         //计算居中需要的偏移量
         float chartStartX = startX + itemSpace - offsetTouch;
         //设置显示区域，超出宽度不显示,通过滑动显示

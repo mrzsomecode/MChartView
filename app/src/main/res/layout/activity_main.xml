@@ -29,7 +29,6 @@
             android:text="20"/>
     </LinearLayout>
 
-
     <com.zxz.chartview.chart.MChartView
         android:id="@+id/chart_view"
         android:layout_width="match_parent"
