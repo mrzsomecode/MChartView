@@ -14,6 +14,7 @@ public class ArcPath extends BasePath {
     float cY = 0;
     float upLen = 0;
     float curLen = 0;
+    public Canvas mCanvas;
 
     private ArcPath() {
         super();
@@ -25,37 +26,26 @@ public class ArcPath extends BasePath {
 
     @Override
     public void draw(float x, float y, int position, int maxCount, Canvas canvas) {
-        super.draw(x, y, position, maxCount, canvas);
+        mCanvas = canvas;
+        super.draw(x, y, position, maxCount, mCanvas);
         upX = x;
         upY = y;
     }
 
+    //偏移90°，使第一个在正上方
+    private double getAngle() {
+        return angle * (mPosition - 2) - Math.PI / 2;
+    }
+
     @Override
     public void line2XY(float x, float y) {
+        upLen = Math.abs(centerY - upY) / 3 * 2;
         upLen = (float) Math.sqrt(Math.pow(Math.abs(centerY - upY), 2) + Math.pow(Math.abs(centerX - upX), 2)) / 3 * 2;
         curLen = (float) Math.sqrt(Math.pow(Math.abs(centerY - y), 2) + Math.pow(Math.abs(centerX - x), 2)) / 3 * 2;
-        float offX = (float) (Math.sin(angle / 2) * Math.min(upLen, curLen));
-        float offY = (float) (Math.cos(angle / 2) * Math.min(upLen, curLen));
-        //第一象限 右上角
-        if (upX == centerX || ((y < centerY || upY < centerY) && x > centerX)) {
-            upLen = Math.abs(centerY - upY) / 3 * 2;
-            offX = (float) (Math.sin(angle / 2) * Math.min(upLen, curLen));
-            offY = (float) (Math.cos(angle / 2) * Math.min(upLen, curLen));
-            cX = centerX + offX;
-            cY = centerY - offY;
-        } else if (y > centerY && x > centerX) {
-            //第四象限 右下角
-            cX = centerX + offX;
-            cY = centerY + offY;
-        } else if ((y > centerY || upY > centerY) && x < centerX) {
-            //第三象限 左下角
-            cX = centerX - offX;
-            cY = centerY + offY;
-        } else if (y < centerY && x < centerX) {
-            //第二象限 左上角
-            cX = centerX - offX;
-            cY = centerY - offY;
-        }
+        float offX = (float) (Math.cos(getAngle() + angle / 2) * Math.min(upLen, curLen));
+        float offY = (float) (Math.sin(getAngle() + angle / 2) * Math.min(upLen, curLen));
+        cX = centerX + offX;
+        cY = centerY + offY;
         quadTo(cX, cY, x, y);
     }
 

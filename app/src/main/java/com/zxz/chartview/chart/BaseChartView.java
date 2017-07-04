@@ -12,6 +12,7 @@ import android.graphics.PathEffect;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
@@ -20,13 +21,12 @@ import com.zxz.chartview.R;
 import java.util.List;
 
 /**
- * 基类，理论上支持扩展,还有待优化，扩展性不好，可能扩展起来比较麻烦
  * Created by Administrator on 2017/6/15.
  */
 
 public abstract class BaseChartView<T extends ICharData> extends View {
     //每个item间距
-    protected int itemSpace = 30;
+    protected float itemSpace = 30;
     //文字，线
     protected int lineColor;
     //单个Item宽度，里面的图形等分宽度
@@ -34,15 +34,29 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     //单个item宽度（显示文字宽度）,最长文字宽度超过默认的或者xml配置的，选择最长文字宽度
     protected int itemWidth;
     protected List<T> datas;
-    protected int[] maxValue = {100};
+    protected int maxValue = 100;
     protected float animationValue;
-    protected int interval[] = {25};
+    protected int interval = 25;
     protected int lineCount = 5;
     protected Paint mPaint;
     protected Paint mChartPaint;
     protected float textSize;
     //图形与描述的间距
     protected int describeTextPadding = 30;
+    //是否显示顶部描述
+    protected boolean showTopDescribe = false;
+    //是否显示底部描述
+    protected boolean showBottomDescribe = false;
+    protected boolean canOut = false;
+
+    public void showBottomDescribe(boolean show) {
+        showBottomDescribe = show;
+    }
+
+    public void showTopDescribe(boolean show) {
+        showTopDescribe = show;
+    }
+
 
     public BaseChartView(Context context) {
         this(context, null);
@@ -84,28 +98,41 @@ public abstract class BaseChartView<T extends ICharData> extends View {
 
     //计算最大刻度，刻度之间的间距Value
     protected void initMax() {
-        int[] result = new int[2];
-        result[0] = 25;
-        result[1] = 100;
+        int tempMax = 4;
+        int tempItemWidth = 0;
         for (int i = 0; i < datas.size(); i++) {
+            tempItemWidth = (int) Math.max(tempItemWidth, mPaint.measureText(datas.get(i).getLable()));
             for (ICharData value : datas.get(i).getChildDatas()) {
-                result[1] = Math.max(result[1], value.getValue());
+                tempMax = Math.max(tempMax, value.getValue());
             }
         }
-        resetMax(result);
-        interval[0] = result[0];
-        maxValue[0] = result[1];
+        Log.e(TAG, "initMax : " + tempItemWidth);
+        itemWidth = tempItemWidth;
+        resetMax(tempMax);
     }
 
-    protected void resetMax(int[] tempMaxValue) {
-        if (tempMaxValue[1] < 100)
-            tempMaxValue[1] = 100;
-        else {
-            int n = tempMaxValue[1] / 100;
-            tempMaxValue[1] = 100 * (n + ((tempMaxValue[1] % 100 > 0) ? 1 : 0));
+    protected void resetMax(float tempMax) {
+        float tempInterval = 0;
+        maxValue = (int) tempMax;
+        while ((tempInterval = (tempMax / (lineCount - 1))) % 5 != 0) {
+            float tempInterval2 = (tempMax / lineCount);
+            if (tempInterval2 % 5 == 0 && canOut) {
+                if (tempMax - maxValue > 0) {
+                    interval = (int) Math.ceil(tempMax / (lineCount));
+                    maxValue = interval * lineCount;
+                    return;
+                }
+            } else if (tempInterval2 == 1) {
+                if (tempMax > maxValue || canOut) {
+                    interval = (int) Math.ceil(tempMax / (lineCount));
+                    maxValue = interval * lineCount;
+                    return;
+                }
+            }
+            tempMax++;
         }
-        tempMaxValue[0] = (int) Math.ceil(tempMaxValue[1] / 4.0);
-        tempMaxValue[1] = tempMaxValue[0] * 4;
+        interval = (int) Math.ceil(tempMax / (lineCount - 1));
+        maxValue = interval * lineCount;
     }
 
     public void setDatas(List<T> datas) {
@@ -124,16 +151,6 @@ public abstract class BaseChartView<T extends ICharData> extends View {
         rectF.bottom = bottom;
         rectF.top = bottom - (height * animationValue);
         canvas.drawRoundRect(rectF, corner, corner, mChartPaint);
-    }
-
-    /**
-     * 画虚线
-     */
-    protected void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY) {
-        Path path = new Path();
-        path.moveTo(startX, startY);
-        path.lineTo(endX, endY);
-        canvas.drawPath(path, mPaint);
     }
 
     //动画效果
@@ -159,6 +176,16 @@ public abstract class BaseChartView<T extends ICharData> extends View {
             return;
         drawLines(canvas);
         drawContent(canvas);
+    }
+
+    /**
+     * 画虚线
+     */
+    protected void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY) {
+        Path path = new Path();
+        path.moveTo(startX, startY);
+        path.lineTo(endX, endY);
+        canvas.drawPath(path, mPaint);
     }
 
     protected abstract void drawLines(Canvas canvas);

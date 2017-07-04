@@ -10,7 +10,7 @@ import android.graphics.Path;
 import android.graphics.PathEffect;
 import android.graphics.Point;
 import android.util.AttributeSet;
-import android.view.View;
+import android.util.Log;
 
 import com.zxz.chartview.R;
 import com.zxz.chartview.chart.path.ArcPath;
@@ -93,24 +93,31 @@ public class RadoView extends BaseChartView<ChartBean> {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int specMode = View.MeasureSpec.getMode(heightMeasureSpec);
-        int specSize = View.MeasureSpec.getSize(heightMeasureSpec);
+        int specMode = MeasureSpec.getMode(heightMeasureSpec);
+        int specSize = MeasureSpec.getSize(heightMeasureSpec);
         int w = getDefaultSize(getSuggestedMinimumWidth(), widthMeasureSpec);
         int h = getDefaultSize(getSuggestedMinimumHeight(), heightMeasureSpec);
         textHeight = Math.abs(mPaint.ascent());
-        bottomExplainH = textHeight * 4;
+        bottomExplainH = textHeight * 5;
         //如果没有设置半径，自动计算半径(半径和控件高度 必须设置一个)
         //减去描述的距离,底部预留文字高度
-        if (radius == -1)
-            radius = Math.min(h - textHeight * 2 - bottomExplainH - describeTextPadding - getPaddingTop() - getPaddingBottom(), w - getPaddingLeft() - getPaddingRight()) / 2;
+        if (radius == -1) {
+            if (showTopDescribe)
+                radius = Math.min(h - bottomExplainH - describeTextPadding - textHeight * 2 - getPaddingTop() - getPaddingBottom(), w - getPaddingLeft() - getPaddingRight()) / 2;
+            else
+                radius = Math.min(h - bottomExplainH - textHeight - getPaddingTop() - getPaddingBottom(), w - getPaddingLeft() - getPaddingRight()) / 2;
+        }
+
         switch (specMode) {
-            case View.MeasureSpec.EXACTLY:
+            case MeasureSpec.EXACTLY:
                 h = specSize;
                 break;
-            case View.MeasureSpec.UNSPECIFIED:
-            case View.MeasureSpec.AT_MOST:
-                //底部描述高度(bottomExplainH)，加上顶部描述高度(textHeight+describeTextPadding),再加上圆环维度标注数字的高度(textHeight)
-                h = (int) (radius * 2 + bottomExplainH + textHeight + describeTextPadding + textHeight + getPaddingTop() + getPaddingBottom());
+            case MeasureSpec.UNSPECIFIED:
+            case MeasureSpec.AT_MOST:
+                //底部描述高度(bottomExplainH)，加上顶部描述高度(textHeight+describeTextPadding),再加上圆环维度标注数字的高度和间距(textHeight+itemSpace)
+                h = (int) (radius * 2 + bottomExplainH + textHeight + describeTextPadding + textHeight + itemSpace + getPaddingTop() + getPaddingBottom());
+                if (!showTopDescribe)
+                    h -= textHeight + describeTextPadding;
                 break;
         }
         setMeasuredDimension(w, h);
@@ -118,9 +125,9 @@ public class RadoView extends BaseChartView<ChartBean> {
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        centerX = w / 2;
-        centerY = (int) (h - getPaddingBottom() - radius - bottomExplainH);
-        textMaxW = mPaint.measureText(maxValue[0] + "");
+        centerX = (w - getPaddingLeft() - getPaddingRight()) / 2;
+        centerY = (int) (h - getPaddingTop() - getPaddingBottom() - radius - bottomExplainH);
+        textMaxW = mPaint.measureText(maxValue + "");
         mRatioStartX = getWidth() - getPaddingRight() - 20 - textMaxW - mRatioW;
         //如果圆会超过比例尺，就减去,然后重新计算控件高度
         if (centerX + radius > mRatioStartX) {
@@ -149,8 +156,10 @@ public class RadoView extends BaseChartView<ChartBean> {
             mChartPaint.setAlpha(127);
             drawRegion(canvas, item.getChildDatas());
             //描述柱状图的高度跟文字一样
-            drawChart(explainStartX, explainStartX + 15, getPaddingTop() + textHeight, 5, textHeight, animationValue, canvas);
-            canvas.drawText(item.lable, explainStartX + 25, getPaddingTop() + textHeight - mPaint.descent() / 2, mChartPaint);
+            if (showTopDescribe) {
+                drawChart(explainStartX, explainStartX + 15, getPaddingTop() + textHeight, 5, textHeight, animationValue, canvas);
+                canvas.drawText(item.lable, explainStartX + 25, getPaddingTop() + textHeight - mPaint.descent() / 2, mChartPaint);
+            }
             explainStartX += 65 + mChartPaint.measureText(item.lable);
         }
     }
@@ -172,7 +181,7 @@ public class RadoView extends BaseChartView<ChartBean> {
             float ratioStartX = getWidth() - getPaddingRight() - 20 - textMaxW - mRatioW;
             float ratioStartY = centerY + radius - (textHeight + 5) * (i - 1);
             mPaint.setTextSize(textSize - 4);
-            canvas.drawText(i * interval[0] + "", getWidth() - getPaddingRight() - textMaxW, ratioStartY + textHeight / 3, mPaint);
+            canvas.drawText(i * interval + "", getWidth() - getPaddingRight() - textMaxW, ratioStartY + textHeight / 3, mPaint);
             //圆环
             canvas.drawCircle(centerX, centerY, curR, mPaint);
             drawDashed(canvas, ratioStartX, ratioStartX + mRatioW, ratioStartY, ratioStartY);
@@ -217,7 +226,7 @@ public class RadoView extends BaseChartView<ChartBean> {
         float rightBottomWidth = bottomExplainStr.length > 3 ? mPaint.measureText(bottomExplainStr[3]) + bottomChartWidth : leftBottomWidth;
         float bottomItemW = 0;
         float btStartX = getPaddingLeft();
-        float bottomStartY = centerY + radius + textHeight * 2;
+        float bottomStartY = centerY + radius + textHeight * 3;
         int i = 0;
         for (ChartBean bean : item) {
             mPaint.setTextSize(textSize);
@@ -299,7 +308,7 @@ public class RadoView extends BaseChartView<ChartBean> {
             path = new ArcPath(centerX, centerY, angle);
         }
         for (int i = 0; i < item.size(); i++) {
-            double percent = item.get(i).getValue() / (maxValue[0] * 1.0);
+            double percent = item.get(i).getValue() / ((maxValue - interval) * 1.0);
             float x = (float) (centerX + radius * Math.cos(getAngle(i)) * percent * animationValue);
             float y = (float) (centerY + radius * Math.sin(getAngle(i)) * percent * animationValue);
             path.draw(x, y, i + 1, item.size(), canvas);

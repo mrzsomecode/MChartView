@@ -16,6 +16,7 @@ public abstract class BasePath extends Path {
     public static final int ARC = 1 << 1;
     //直线边
     public static final int LINE = 1 << 2;
+    public int mPosition;
 
     @IntDef({ARC, LINE})
     @Retention(RetentionPolicy.SOURCE)
@@ -40,7 +41,8 @@ public abstract class BasePath extends Path {
     }
 
     public void draw(float x, float y, int position, int maxCount, Canvas canvas) {
-        if (position == 1) {
+        mPosition = position;
+        if (mPosition == 1) {
             startX = x;
             startY = y;
             moveTo(x, y);

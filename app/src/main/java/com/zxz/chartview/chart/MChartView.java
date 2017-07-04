@@ -10,7 +10,6 @@ import android.view.MotionEvent;
 
 import com.zxz.chartview.R;
 
-import java.util.List;
 
 /**
  * 柱状图  Xml必须显示固定高度
@@ -21,8 +20,6 @@ public class MChartView extends BaseChartView<ChartBean> {
     public float chartHeight;
     //左边刻度最大宽度
     public float leftMaxW;
-    //右边刻度最大宽度
-    public float rightMaxW = 0;
 
     //超出显示的宽度,最大滑动宽度
     private int outWidth;
@@ -44,38 +41,9 @@ public class MChartView extends BaseChartView<ChartBean> {
     //手指滑动
     private float offsetTouch = 0;
 
-    //整体居中偏移（大的item）
-    private float centerOffset;
 
     public void setOnItemTouchListener(onItemTouchListener listener) {
         this.listener = listener;
-    }
-
-
-    @Override
-    public void setDatas(List<ChartBean> datas) {
-        super.setDatas(datas);
-    }
-
-    //计算最大刻度，刻度之间的间距Value,centerOffset
-    protected void initMax() {
-        int size = datas.get(0).getChildDatas().size();
-        maxValue = new int[size];
-        interval = new int[size];
-        for (int i = 0; i < datas.size(); i++) {
-            ChartBean item = datas.get(i);
-            //计算最大文字的宽度 作为每个item的宽度
-            itemWidth = (int) Math.max(itemWidth, mPaint.measureText(item.lable));
-            for (int j = 0; j < datas.get(i).getChildDatas().size(); j++) {
-                maxValue[j] = Math.max(maxValue[j], item.getChildDatas().get(j).getValue());
-            }
-        }
-        for (int i = 0; i < maxValue.length; i++) {
-            int[] temp = new int[]{0, maxValue[i]};
-            resetMax(temp);
-            interval[i] = temp[0];
-            maxValue[i] = temp[1];
-        }
     }
 
     public MChartView(Context context) {
@@ -88,6 +56,8 @@ public class MChartView extends BaseChartView<ChartBean> {
 
     public MChartView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        canOut = true;
+        describeTextPadding = 10;
     }
 
 
@@ -95,12 +65,13 @@ public class MChartView extends BaseChartView<ChartBean> {
     protected void onDraw(Canvas canvas) {
         //底部预留文字的高度
         startY = getHeight() - getPaddingBottom() - textSize - 20;
+        leftMaxW = mPaint.measureText(maxValue + "");
         //坐标预留刻度(最大值)的宽度
-        startX = mPaint.measureText(maxValue[0] + "") + getPaddingLeft();
+        startX = leftMaxW + 5 + getPaddingLeft();
         //图形能用的最大高度
-        chartHeight = startY - textSize - getPaddingTop();
-        leftMaxW = mPaint.measureText(maxValue[0] + "");
-        rightMaxW = maxValue.length > 1 ? mPaint.measureText(maxValue[1] + "") : 0;
+        chartHeight = startY - (textSize - 5) - describeTextPadding - getPaddingTop();
+        if (showTopDescribe)
+            chartHeight -= textSize;
         super.onDraw(canvas);
     }
 
@@ -116,7 +87,7 @@ public class MChartView extends BaseChartView<ChartBean> {
         int scorllX = (int) (ev.getX() - x);
         x = (int) ev.getX();
         y = (int) ev.getY();
-        int left = (int) (startX + itemSpace - offsetTouch + centerOffset);
+        int left = (int) (startX + itemSpace - offsetTouch);
         int right;
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
@@ -135,21 +106,21 @@ public class MChartView extends BaseChartView<ChartBean> {
                         selectIndex = i;
                         invalidate();
                     }
-                    left = right + itemSpace;
+                    left = (int) (right + itemSpace);
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
                 //左右移动
                 if (scorllX != 0 && outWidth > 0) {
                     getParent().requestDisallowInterceptTouchEvent(true);
-                } else {
-                    getParent().requestDisallowInterceptTouchEvent(false);
                 }
                 offsetTouch -= scorllX;
                 if (offsetTouch < 0) {
                     offsetTouch = 0;
+                    getParent().requestDisallowInterceptTouchEvent(false);
                 } else if (offsetTouch > outWidth) {
                     offsetTouch = outWidth;
+                    getParent().requestDisallowInterceptTouchEvent(false);
                 }
                 invalidate();
                 break;
@@ -159,21 +130,18 @@ public class MChartView extends BaseChartView<ChartBean> {
 
     @Override
     protected void drawContent(Canvas canvas) {
+        float cw = (float) Math.ceil((mWidth - leftMaxW - 5 - datas.size() * itemWidth));
+        float space = cw / (datas.size() + 1);
+        itemSpace = space > itemSpace ?  space : itemSpace;
         //计算居中需要的偏移量
-        int needW = datas.size() * itemWidth + datas.size() * itemSpace;
-        if (mWidth - rightMaxW - leftMaxW > needW) {
-            centerOffset = (mWidth - rightMaxW - leftMaxW - needW) / 2 - itemSpace / 2;
-        } else {
-            centerOffset = 0;
-        }
-        float chartStartX = startX + itemSpace - offsetTouch + centerOffset;
+        float chartStartX = startX + itemSpace - offsetTouch;
         //设置显示区域，超出宽度不显示,通过滑动显示
-        canvas.clipRect(startX, 0, mWidth - rightMaxW, getHeight());
+        canvas.clipRect(startX, 0, getWidth() - getPaddingRight() - 5 - startX, getHeight());
         for (int i = 0; i < datas.size(); i++) {
             ChartBean item = datas.get(i);
             //最后一个，超出去了就是最大滑动距离
-            if (i == datas.size() - 1 && chartStartX + itemSpace + itemWidth + offsetTouch > mWidth) {
-                outWidth = (int) (chartStartX + itemSpace + itemWidth + offsetTouch - mWidth);
+            if (i == datas.size() - 1 && chartStartX + itemSpace + itemWidth + offsetTouch > getWidth() - getPaddingRight()) {
+                outWidth = (int) (chartStartX + itemSpace + itemWidth + offsetTouch - (getWidth() - getPaddingRight()));
             }
             //画lable
             mPaint.setColor(selectIndex == i ? getResources().getColor(R.color.fourth_text_color) : lineColor);
@@ -185,9 +153,10 @@ public class MChartView extends BaseChartView<ChartBean> {
                 ChartBean child = item.getChildDatas().get(j);
                 changeColor(mChartPaint, child, i);
                 //居中显示，每个小图形间距 5
-                float childLeft = chartStartX + ((itemWidth - chartWidth) / 2) + chartWidth / childsCount * j + 5 * j;
-                float childRight = childLeft + chartWidth / childsCount;
-                float height = ((child.getValue() * 1.0f) / maxValue[j] * chartHeight);
+                float itemChildW = (chartWidth - (5 * (childsCount - 1))) / childsCount;
+                float childLeft = chartStartX + ((itemWidth - chartWidth) / 2) + itemChildW * j + 5 * j;
+                float childRight = childLeft + itemChildW;
+                float height = ((child.getValue() * 1.0f) / maxValue * chartHeight);
                 drawChart(childLeft, childRight, startY, 14, height, animationValue, canvas);
             }
             chartStartX += itemSpace + itemWidth;
@@ -199,7 +168,7 @@ public class MChartView extends BaseChartView<ChartBean> {
     @Override
     protected void drawLines(Canvas canvas) {
         mPaint.setColor(lineColor);
-        if (datas != null) {
+        if (datas != null && showTopDescribe) {
             float tTop = getPaddingTop();
             int describeTextStartX = getPaddingLeft();
             //描述柱状图的高度跟文字一样
@@ -208,10 +177,10 @@ public class MChartView extends BaseChartView<ChartBean> {
             //左上角描述
             for (int i = 0; i < datas.get(0).getChildDatas().size(); i++) {
                 ChartBean child = datas.get(0).getChildDatas().get(i);
-                descibeTextValue = maxValue[i] * (descibeTextHeight / chartHeight);
+                descibeTextValue = maxValue * (descibeTextHeight / chartHeight);
                 mChartPaint.setColor(getResources().getColor(child.getClickColor()));
                 mPaint.setColor(getResources().getColor(child.getClickColor()));
-                float height = (descibeTextValue / maxValue[i] * chartHeight);
+                float height = (descibeTextValue / maxValue * chartHeight);
                 drawChart(describeTextStartX, describeTextStartX + 15, tTop + descibeTextHeight + mPaint.descent() / 2, 4,
                         height, animationValue, canvas);
                 canvas.drawText(child.lable, describeTextStartX + 25, (tTop + descibeTextHeight), mPaint);
@@ -226,25 +195,17 @@ public class MChartView extends BaseChartView<ChartBean> {
         mPaint.setTextSize(textSize - 5);
         for (int i = 0; i < lineCount; i++) {
             //画横向刻度数字
-            float curY = (startY - ((chartHeight - describeTextPadding - mPaint.descent()) / (lineCount - 1) * i));
-            String leftIndex = interval[0] * i + "";
+            float curY = (startY - (chartHeight / (lineCount) * i));
+            String leftIndex = interval * i + "";
             //左刻度
             mPaint.setColor(getResources().getColor(datas.get(0).getChildDatas().get(0).getClickColor()));
             canvas.drawText(leftIndex, getPaddingLeft() + ((leftMaxW - mPaint.measureText(leftIndex)) / 2), curY + (textSize - 5) / 3, mPaint);
-            if (rightMaxW > 0) {
-                String rightIndex = interval[1] * i + "";
-                //右刻度
-                mPaint.setColor(getResources().getColor(datas.get(0).getChildDatas().get(1).getClickColor()));
-                canvas.drawText(rightIndex, mWidth + getPaddingLeft() - rightMaxW +
-                        ((rightMaxW - mPaint.measureText(rightIndex)) / 2), curY + (textSize - 5) / 3, mPaint);
-            }
             //x轴,刻度
             mPaint.setColor(lineColor);
-            drawDashed(canvas, startX, getWidth() - getPaddingRight() - rightMaxW, curY, curY);
+            drawDashed(canvas, startX, getWidth() - getPaddingRight(), curY, curY);
         }
         mPaint.setTextSize(textSize);
     }
-
 
     private void changeColor(Paint paint, ChartBean child, int i) {
         paint.setColor(getResources().getColor(selectIndex == i ? child.getClickColor() : child.getColor()));

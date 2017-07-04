@@ -3,6 +3,7 @@ package com.zxz.chartview;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.EditText;
 
 import com.zxz.chartview.chart.ChartBean;
 import com.zxz.chartview.chart.MChartView;
@@ -30,6 +31,7 @@ public class MainActivity extends Activity {
     MChartView mChartView;
     RadoView mRadoView;
     private static final String TAG = "MainActivity";
+    private EditText value;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +39,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         mChartView = (MChartView) findViewById(R.id.chart_view);
         mRadoView = (RadoView) findViewById(R.id.rado_view);
+        value = (EditText) findViewById(R.id.value);
         mRadoView.setBottomExplainStr(bottomExplainStr);
         //mRadoView.setRegioPath(BasePath.LINE);
         mRadoView.setRegioPath(BasePath.ARC);
@@ -53,17 +56,18 @@ public class MainActivity extends Activity {
         datas.clear();
         radoDatas.clear();
         Random random = new Random();
+        int data = Integer.parseInt(value.getText().toString());
         for (int i = 0; i < titles1.length; i++) {
             ArrayList<ChartBean> child = new ArrayList<>();
             for (int j = 0; j < titles2.length; j++) {
-                child.add(new ChartBean(titles2[j], chartColors[j][0], chartColors[j][1], random.nextInt(1000)));
+                child.add(new ChartBean(titles2[j], chartColors[j][0], chartColors[j][1], data));
             }
             datas.add(new ChartBean(titles1[i], child));
         }
         for (int i = 0; i < titles2.length; i++) {
             ArrayList<ChartBean> radoChild = new ArrayList<>();
             for (int j = 1; j <= bottomExplainStr.length; j++) {
-                radoChild.add(new ChartBean("" + j, 0, 0, random.nextInt(1000)));
+                radoChild.add(new ChartBean("" + j, 0, 0, data));
             }
             radoDatas.add(new ChartBean(titles2[i], radoColors[i], radoChild));
         }
