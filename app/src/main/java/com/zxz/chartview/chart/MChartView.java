@@ -2,13 +2,18 @@ package com.zxz.chartview.chart;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.widget.Scroller;
 
 import com.zxz.chartview.R;
+import com.zxz.chartview.chart.bean.ChartBean;
+import com.zxz.chartview.chart.formatter.ValueFormatter;
 
 
 /**
@@ -17,30 +22,47 @@ import com.zxz.chartview.R;
  */
 public class MChartView extends BaseChartView<ChartBean> {
 
+    private final Scroller mScroller;
+    private final GestureDetector mGestureDetector;
     public float chartHeight;
     //左边刻度最大宽度
     public float leftMaxW;
 
     //超出显示的宽度,最大滑动宽度
-    private int outWidth;
+    protected int outWidth;
 
     //真实宽度 去除padding
-    private int mWidth;
+    protected int mWidth;
     //真实高度，去除padding
-    private int mHeight;
+    protected int mHeight;
     //图形绘制Y坐标起点
-    private float startY;
+    protected float startY;
     //图形绘制X坐标起点
-    private float startX;
+    protected float startX;
 
     //当前选中的  默认第一个 下标0开始
-    private int selectIndex = 0;
+    protected int selectIndex = 0;
 
     //点击回调
-    private onItemTouchListener listener;
+    protected onItemTouchListener listener;
+    protected int yColor = Color.GRAY;
     //手指滑动
-    private float offsetTouch = 0;
+    protected float offsetTouch = 0;
+    protected ValueFormatter yValueFormatter;
 
+    protected ValueFormatter chartValueFormatter;
+
+    public void setChartValueFormatter(ValueFormatter chartValueFormatter) {
+        this.chartValueFormatter = chartValueFormatter;
+    }
+
+    public void setyColor(int yColor) {
+        this.yColor = yColor;
+    }
+
+    public void setYValueFormatter(ValueFormatter valueFormatter) {
+        yValueFormatter = valueFormatter;
+    }
 
     public void setOnItemTouchListener(onItemTouchListener listener) {
         this.listener = listener;
@@ -58,8 +80,25 @@ public class MChartView extends BaseChartView<ChartBean> {
         super(context, attrs, defStyleAttr);
         canOut = true;
         describeTextPadding = 10;
+        mScroller = new Scroller(context);
+        mGestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                mScroller.fling((int) offsetTouch, 0, -(int) velocityX, -(int) velocityY, 0, outWidth, 0, 0);
+                postInvalidate();
+                return false;
+            }
+        });
     }
 
+    @Override
+    public void computeScroll() {
+        if (mScroller.computeScrollOffset()) {
+            offsetTouch = mScroller.getCurrX();
+            postInvalidate();
+        }
+        super.computeScroll();
+    }
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -78,7 +117,6 @@ public class MChartView extends BaseChartView<ChartBean> {
     int x, y;
     long downTime;
 
-    //    private VelocityTracker vTracker = null;
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         //监听点击，根据坐标判断，点击了哪一块区域
@@ -108,23 +146,24 @@ public class MChartView extends BaseChartView<ChartBean> {
                     }
                     left = (int) (right + itemSpace);
                 }
+                if (offsetTouch <= 0 || offsetTouch >= outWidth)
+                    getParent().requestDisallowInterceptTouchEvent(false);
                 break;
             case MotionEvent.ACTION_MOVE:
                 //左右移动
-                if (scorllX != 0 && outWidth > 0) {
+                if (scorllX != 0 && outWidth > 0 && offsetTouch < outWidth) {
                     getParent().requestDisallowInterceptTouchEvent(true);
                 }
                 offsetTouch -= scorllX;
                 if (offsetTouch < 0) {
                     offsetTouch = 0;
-                    getParent().requestDisallowInterceptTouchEvent(false);
                 } else if (offsetTouch > outWidth) {
                     offsetTouch = outWidth;
-                    getParent().requestDisallowInterceptTouchEvent(false);
                 }
                 invalidate();
                 break;
         }
+        mGestureDetector.onTouchEvent(ev);
         return true;
     }
 
@@ -132,7 +171,7 @@ public class MChartView extends BaseChartView<ChartBean> {
     protected void drawContent(Canvas canvas) {
         float cw = (float) Math.ceil((mWidth - leftMaxW - 5 - datas.size() * itemWidth));
         float space = cw / (datas.size() + 1);
-        itemSpace = space > itemSpace ? space : itemSpace;
+        itemSpace = space > xmlItemSpace ? space : itemSpace;
         //计算居中需要的偏移量
         float chartStartX = startX + itemSpace - offsetTouch;
         //设置显示区域，超出宽度不显示,通过滑动显示
@@ -163,7 +202,6 @@ public class MChartView extends BaseChartView<ChartBean> {
         }
     }
 
-    private static final String TAG = "MChartView";
 
     @Override
     protected void drawLines(Canvas canvas) {
@@ -198,7 +236,7 @@ public class MChartView extends BaseChartView<ChartBean> {
             float curY = (startY - (chartHeight / (lineCount) * i));
             String leftIndex = interval * i + "";
             //左刻度
-            mPaint.setColor(getResources().getColor(datas.get(0).getChildDatas().get(0).getClickColor()));
+            mPaint.setColor(yColor);
             canvas.drawText(leftIndex, getPaddingLeft() + ((leftMaxW - mPaint.measureText(leftIndex)) / 2), curY + (textSize - 5) / 3, mPaint);
             //x轴,刻度
             mPaint.setColor(lineColor);
@@ -207,7 +245,7 @@ public class MChartView extends BaseChartView<ChartBean> {
         mPaint.setTextSize(textSize);
     }
 
-    private void changeColor(Paint paint, ChartBean child, int i) {
+    protected void changeColor(Paint paint, ChartBean child, int i) {
         paint.setColor(getResources().getColor(selectIndex == i ? child.getClickColor() : child.getColor()));
     }
 

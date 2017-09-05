@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
 import com.zxz.chartview.R;
+import com.zxz.chartview.chart.bean.ICharData;
 
 import java.util.List;
 
@@ -27,6 +28,7 @@ import java.util.List;
 public abstract class BaseChartView<T extends ICharData> extends View {
     //每个item间距
     protected float itemSpace = 30;
+    protected float xmlItemSpace = 30;
     //文字，线
     protected int lineColor;
     //单个Item宽度，里面的图形等分宽度
@@ -48,6 +50,16 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     //是否显示底部描述
     protected boolean showBottomDescribe = false;
     protected boolean canOut = false;
+    //真实宽度 去除padding
+    protected int mWidth;
+    //真实高度，去除padding
+    protected int mHeight;
+    protected int animationDuration = 1000;
+    public PathEffect mEffects;
+
+    public void setAnimationDuration(int animationDuration) {
+        this.animationDuration = animationDuration;
+    }
 
     public void showBottomDescribe(boolean show) {
         showBottomDescribe = show;
@@ -74,10 +86,12 @@ public abstract class BaseChartView<T extends ICharData> extends View {
         chartWidth = array.getDimensionPixelSize(R.styleable.MyChartView_chartWidth, 50);
         textSize = array.getDimensionPixelSize(R.styleable.MyChartView_chartTextSize, 30);
         itemWidth = array.getDimensionPixelSize(R.styleable.MyChartView_chartItemWidth, 150);
-        itemSpace = array.getDimensionPixelSize(R.styleable.MyChartView_chartItemSpace, 30);
+        xmlItemSpace = array.getDimensionPixelSize(R.styleable.MyChartView_chartItemSpace, 30);
+        itemSpace = xmlItemSpace;
         array.recycle();
         initPaint();
     }
+
 
     private static final String TAG = "BaseChartView";
 
@@ -87,9 +101,9 @@ public abstract class BaseChartView<T extends ICharData> extends View {
         mPaint.setAntiAlias(true);
         mPaint.setTextSize(textSize);
         //虚线
-        PathEffect effects = new DashPathEffect(new float[]{5, 5, 5, 5}, 1);
+        mEffects = new DashPathEffect(new float[]{5, 5, 5, 5}, 1);
         mPaint.setStyle(Paint.Style.STROKE);
-        mPaint.setPathEffect(effects);
+        mPaint.setPathEffect(mEffects);
 
         mChartPaint = new Paint();
         mChartPaint.setTextSize(textSize);
@@ -98,12 +112,16 @@ public abstract class BaseChartView<T extends ICharData> extends View {
 
     //计算最大刻度，刻度之间的间距Value
     protected void initMax() {
-        int tempMax = 4;
+        float tempMax = 4;
         int tempItemWidth = 0;
         for (int i = 0; i < datas.size(); i++) {
             tempItemWidth = (int) Math.max(tempItemWidth, mPaint.measureText(datas.get(i).getLable()));
-            for (ICharData value : datas.get(i).getChildDatas()) {
-                tempMax = Math.max(tempMax, value.getValue());
+            if (datas.get(i).getChildDatas() != null) {
+                for (ICharData value : datas.get(i).getChildDatas()) {
+                    tempMax = Math.max(tempMax, value.getValue());
+                }
+            } else {
+                tempMax = Math.max(tempMax, datas.get(i).getValue());
             }
         }
         Log.e(TAG, "initMax : " + tempItemWidth);
@@ -156,7 +174,7 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     //动画效果
     protected void startAnimation() {
         animationValue = 0.0f;
-        ValueAnimator ani = ValueAnimator.ofFloat(0, 1).setDuration(1000);
+        ValueAnimator ani = ValueAnimator.ofFloat(0, 1).setDuration(animationDuration);
         ani.setInterpolator(new DecelerateInterpolator());
         ani.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
 
@@ -171,7 +189,6 @@ public abstract class BaseChartView<T extends ICharData> extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
         if (datas == null)
             return;
         drawLines(canvas);
@@ -182,10 +199,21 @@ public abstract class BaseChartView<T extends ICharData> extends View {
      * 画虚线
      */
     protected void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY) {
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setPathEffect(mEffects);
         Path path = new Path();
         path.moveTo(startX, startY);
         path.lineTo(endX, endY);
         canvas.drawPath(path, mPaint);
+        mPaint.setPathEffect(null);
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        mWidth = w - getPaddingLeft() - getPaddingRight();
+        mHeight = h - getPaddingTop() - getPaddingBottom();
+        postInvalidate();
     }
 
     protected abstract void drawLines(Canvas canvas);

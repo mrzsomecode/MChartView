@@ -10,9 +10,9 @@ import android.graphics.Path;
 import android.graphics.PathEffect;
 import android.graphics.Point;
 import android.util.AttributeSet;
-import android.util.Log;
 
 import com.zxz.chartview.R;
+import com.zxz.chartview.chart.bean.ChartBean;
 import com.zxz.chartview.chart.path.ArcPath;
 import com.zxz.chartview.chart.path.BasePath;
 import com.zxz.chartview.chart.path.LinePath;

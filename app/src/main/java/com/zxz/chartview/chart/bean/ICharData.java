@@ -1,4 +1,4 @@
-package com.zxz.chartview.chart;
+package com.zxz.chartview.chart.bean;
 
 import java.util.ArrayList;
 
@@ -10,7 +10,11 @@ public interface ICharData {
 
     String getLable();
 
-    int getValue();
+    float getValue();
+
+    boolean isShowLable();
+
+    boolean isShowValue();
 
     ArrayList<? extends ICharData> getChildDatas();
 }

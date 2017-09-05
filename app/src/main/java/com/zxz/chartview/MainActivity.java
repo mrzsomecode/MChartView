@@ -5,9 +5,10 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 
-import com.zxz.chartview.chart.ChartBean;
+import com.zxz.chartview.chart.LineChartView;
 import com.zxz.chartview.chart.MChartView;
 import com.zxz.chartview.chart.RadoView;
+import com.zxz.chartview.chart.bean.ChartBean;
 import com.zxz.chartview.chart.path.BasePath;
 
 import java.util.ArrayList;
@@ -27,17 +28,22 @@ public class MainActivity extends Activity {
             {R.color.rightColor, R.color.selectRightColor},
             {R.color.colorPrimary, R.color.colorPrimaryDark}};
     private List<ChartBean> datas = new ArrayList<>();
+    private List<ChartBean> lineDatas = new ArrayList<>();
     private List<ChartBean> radoDatas = new ArrayList<>();
     MChartView mChartView;
     RadoView mRadoView;
     private static final String TAG = "MainActivity";
     private EditText value;
+    public LineChartView mLineChart;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mChartView = (MChartView) findViewById(R.id.chart_view);
+        mLineChart = (LineChartView) findViewById(R.id.lineChart);
+        mLineChart.setAnimationDuration(50 * 500);
+        mLineChart.setShowLable(false);
         mRadoView = (RadoView) findViewById(R.id.rado_view);
         value = (EditText) findViewById(R.id.value);
         mRadoView.setBottomExplainStr(bottomExplainStr);
@@ -55,8 +61,18 @@ public class MainActivity extends Activity {
     public void testData() {
         datas.clear();
         radoDatas.clear();
-        Random random = new Random();
+        lineDatas.clear();
         int data = Integer.parseInt(value.getText().toString());
+        Random random = new Random(data);
+        //折线图
+        for (int i = 0; i < 1; i++) {
+            ArrayList<ChartBean> child = new ArrayList<>();
+            for (int j = 0; j < 50; j++) {
+                child.add(new ChartBean(j + "", chartColors[1][0], chartColors[1][1], random.nextInt(data + 20)));
+            }
+            lineDatas.add(new ChartBean("2016", child));
+        }
+        //柱状图
         for (int i = 0; i < titles1.length; i++) {
             ArrayList<ChartBean> child = new ArrayList<>();
             for (int j = 0; j < titles2.length; j++) {
@@ -64,6 +80,7 @@ public class MainActivity extends Activity {
             }
             datas.add(new ChartBean(titles1[i], child));
         }
+        //雷达图
         for (int i = 0; i < titles2.length; i++) {
             ArrayList<ChartBean> radoChild = new ArrayList<>();
             for (int j = 1; j <= bottomExplainStr.length; j++) {
@@ -71,6 +88,8 @@ public class MainActivity extends Activity {
             }
             radoDatas.add(new ChartBean(titles2[i], radoColors[i], radoChild));
         }
+
+        mLineChart.setDatas(lineDatas);
         mChartView.setDatas(datas);
         mRadoView.setDatas(radoDatas);
     }
