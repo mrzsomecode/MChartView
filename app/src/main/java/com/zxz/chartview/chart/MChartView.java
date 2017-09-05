@@ -81,6 +81,7 @@ public class MChartView extends BaseChartView<ChartBean> {
         canOut = true;
         describeTextPadding = 10;
         mScroller = new Scroller(context);
+        //根据手指离开速度 惯性平滑滚动
         mGestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {

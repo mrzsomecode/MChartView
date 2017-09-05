@@ -31,7 +31,6 @@
     <com.zxz.chartview.chart.PieGraphView
         android:id="@+id/pieView"
         android:layout_width="match_parent"
-        android:background="@color/colorPrimaryDark"
         android:layout_height="170dp"/>
 
     <com.zxz.chartview.chart.LineChartView

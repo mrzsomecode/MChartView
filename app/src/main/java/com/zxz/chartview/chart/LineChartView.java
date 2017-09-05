@@ -5,7 +5,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Shader;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
@@ -21,12 +20,13 @@ import java.util.List;
  */
 
 public class LineChartView extends MChartView {
-    Path path = new Path();
     private boolean showLable = true;
-    private float dotRadius = 12f;
+    //数据圆点半径
+    private float dotRadius = 12.f;
     private String yLable = "正确率";
     private String xLable = "作业记录点";
-    private float minSpace = 4f;//最小间距
+    //item最小间距
+    private float minSpace = 4.f;
     private boolean scrollEnd;
 
     public void setyLable(String yLable) {
@@ -124,7 +124,7 @@ public class LineChartView extends MChartView {
         float cw = (float) Math.ceil((mWidth - leftMaxW - describeTextPadding - maxChildCount * itemWidth));
         float space = cw / (maxChildCount + 1);
         //最小间距4f,如果点太多超出去就可以滑动滑动
-        itemSpace = space < 4f ? 4f : space;
+        itemSpace = space < minSpace ? minSpace : space;
         return maxChildCount;
     }
 

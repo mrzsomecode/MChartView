@@ -42,8 +42,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         mChartView = (MChartView) findViewById(R.id.chart_view);
         mLineChart = (LineChartView) findViewById(R.id.lineChart);
-        mLineChart.setAnimationDuration(50 * 500);
-        mLineChart.setShowLable(false);
+        mLineChart.setAnimationDuration(50 * 200);
         mRadoView = (RadoView) findViewById(R.id.rado_view);
         value = (EditText) findViewById(R.id.value);
         mRadoView.setBottomExplainStr(bottomExplainStr);

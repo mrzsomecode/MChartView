@@ -26,6 +26,7 @@ import java.util.List;
  */
 
 public abstract class BaseChartView<T extends ICharData> extends View {
+    protected Path path = new Path();
     //每个item间距
     protected float itemSpace = 30;
     protected float xmlItemSpace = 30;
@@ -50,16 +51,9 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     //是否显示底部描述
     protected boolean showBottomDescribe = false;
     protected boolean canOut = false;
-    //真实宽度 去除padding
-    protected int mWidth;
-    //真实高度，去除padding
-    protected int mHeight;
-    protected int animationDuration = 1000;
     public PathEffect mEffects;
-
-    public void setAnimationDuration(int animationDuration) {
-        this.animationDuration = animationDuration;
-    }
+    private int animationDuration = 1000;
+    private ValueAnimator mValueAnimator;
 
     public void showBottomDescribe(boolean show) {
         showBottomDescribe = show;
@@ -69,6 +63,9 @@ public abstract class BaseChartView<T extends ICharData> extends View {
         showTopDescribe = show;
     }
 
+    public void setAnimationDuration(int animationDuration) {
+        this.animationDuration = animationDuration;
+    }
 
     public BaseChartView(Context context) {
         this(context, null);
@@ -92,22 +89,19 @@ public abstract class BaseChartView<T extends ICharData> extends View {
         initPaint();
     }
 
-
     private static final String TAG = "BaseChartView";
 
     //初始化画笔
     private void initPaint() {
-        mPaint = new Paint();
-        mPaint.setAntiAlias(true);
+        mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setTextSize(textSize);
         //虚线
         mEffects = new DashPathEffect(new float[]{5, 5, 5, 5}, 1);
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setPathEffect(mEffects);
 
-        mChartPaint = new Paint();
+        mChartPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mChartPaint.setTextSize(textSize);
-        mChartPaint.setAntiAlias(true);
     }
 
     //计算最大刻度，刻度之间的间距Value
@@ -116,12 +110,8 @@ public abstract class BaseChartView<T extends ICharData> extends View {
         int tempItemWidth = 0;
         for (int i = 0; i < datas.size(); i++) {
             tempItemWidth = (int) Math.max(tempItemWidth, mPaint.measureText(datas.get(i).getLable()));
-            if (datas.get(i).getChildDatas() != null) {
-                for (ICharData value : datas.get(i).getChildDatas()) {
-                    tempMax = Math.max(tempMax, value.getValue());
-                }
-            } else {
-                tempMax = Math.max(tempMax, datas.get(i).getValue());
+            for (ICharData value : datas.get(i).getChildDatas()) {
+                tempMax = Math.max(tempMax, value.getValue());
             }
         }
         Log.e(TAG, "initMax : " + tempItemWidth);
@@ -174,24 +164,29 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     //动画效果
     protected void startAnimation() {
         animationValue = 0.0f;
-        ValueAnimator ani = ValueAnimator.ofFloat(0, 1).setDuration(animationDuration);
-        ani.setInterpolator(new DecelerateInterpolator());
-        ani.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+        if (mValueAnimator != null && mValueAnimator.isRunning()) {
+            mValueAnimator.cancel();
+        } else {
+            mValueAnimator = ValueAnimator.ofFloat(0, 1).setDuration(animationDuration);
+            mValueAnimator.setInterpolator(new DecelerateInterpolator());
+            mValueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
 
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                animationValue = (float) animation.getAnimatedValue();
-                postInvalidate();
-            }
-        });
-        ani.start();
+                @Override
+                public void onAnimationUpdate(ValueAnimator animation) {
+                    animationValue = (float) animation.getAnimatedValue();
+                    postInvalidate();
+                }
+            });
+        }
+        mValueAnimator.start();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        drawLines(canvas);
         if (datas == null)
             return;
-        drawLines(canvas);
         drawContent(canvas);
     }
 
@@ -199,21 +194,11 @@ public abstract class BaseChartView<T extends ICharData> extends View {
      * 画虚线
      */
     protected void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY) {
-        mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setPathEffect(mEffects);
-        Path path = new Path();
+        path.reset();
         path.moveTo(startX, startY);
         path.lineTo(endX, endY);
         canvas.drawPath(path, mPaint);
-        mPaint.setPathEffect(null);
-    }
-
-    @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(w, h, oldw, oldh);
-        mWidth = w - getPaddingLeft() - getPaddingRight();
-        mHeight = h - getPaddingTop() - getPaddingBottom();
-        postInvalidate();
     }
 
     protected abstract void drawLines(Canvas canvas);

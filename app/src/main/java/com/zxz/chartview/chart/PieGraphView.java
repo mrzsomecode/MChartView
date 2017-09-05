@@ -1,5 +1,7 @@
 package com.zxz.chartview.chart;
 
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -17,7 +19,9 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.zxz.chartview.R;
 import com.zxz.chartview.chart.bean.PieBean;
+import com.zxz.chartview.chart.formatter.ValueFormatter;
 
 import java.util.List;
 
@@ -35,33 +39,44 @@ public class PieGraphView extends View {
     private float radius;
     private float cx;
     private float cy;
-    private int select = 1;
+    private int select = 0;
     private int parentIndex = 0;
     //点击展开宽度
     private float openWidth = 10f;
+    //展开动画进度
+    private float openAnimationValue = 1.f;
     private float lableSpace = 10f;
     //中心白色圆心 比例
-    private float centerCircleRadius = 0.85f;
+    private float centerCircleRadius = 0.8f;
     public final TextPaint mTextPaint;
     private RectF[] mRectBuffer = {new RectF(), new RectF(), new RectF()};
+
+    private ValueFormatter centerValueFormatter;
+
+    private int maxValue;//所有百分比加起来
+    int index;//当前画到第几个
+    PieBean parent;//父节点是那个
+
+    public void setCenterValueFormatter(ValueFormatter centerValueFormatter) {
+        this.centerValueFormatter = centerValueFormatter;
+    }
 
     public PieGraphView(Context context, AttributeSet attrs) {
         super(context, attrs);
         normalOval = new RectF();
         selectOval = new RectF();
-        paint = new Paint();
-        paint.setAntiAlias(true);
-        paint.setTextSize(30f);
+        paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setTextSize(getResources().getDimensionPixelSize(R.dimen.dp_12));
         paint.setStyle(Paint.Style.FILL);
         mTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        mTextPaint.setTextSize(40f);
+        mTextPaint.setTextSize(getResources().getDimensionPixelSize(R.dimen.dp_16));
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = MeasureSpec.getSize(heightMeasureSpec);
-        radius = Math.min(width, height) / 2 - (lableSpace + openWidth * 2 + paint.getTextSize() / 2);
+        radius = Math.min(width, height) / 2 - (lableSpace + openWidth * 2 + paint.getTextSize());
         cx = width / 2;
         cy = height / 2;
         setMeasuredDimension(width, height);
@@ -84,10 +99,12 @@ public class PieGraphView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (datas != null) {
+        if (datas != null && datas.size() > 0) {
+            maxValue = 0;
+            index = 0;
             float startAngle = 0;
             float sweepAngle = 0;
-            PieBean parent = datas.get(parentIndex);
+            parent = datas.get(parentIndex);
             for (int i = 0; i < parent.childs.size(); i++) {
                 PieBean mPieBean = parent.childs.get(i);
                 if (i == parent.childs.size() - 1) {
@@ -98,10 +115,12 @@ public class PieGraphView extends View {
                 mPieBean.startAngle = startAngle;
                 mPieBean.endAngle = startAngle + sweepAngle;
                 if (i != select) {
+                    index++;
                     drawPieChar(canvas, mPieBean, false);
                 }
                 startAngle += sweepAngle;
             }
+            index++;
             paint.setColor(Color.WHITE);
             canvas.drawCircle(cx, cy, radius * centerCircleRadius, paint);
             PieBean selecedBean = parent.childs.get(select);
@@ -123,18 +142,34 @@ public class PieGraphView extends View {
         float sweepAngle = bean.endAngle - bean.startAngle;
         if (isSelected) {
             drawSelcted(canvas, startAngle, sweepAngle, bean, middle, quadrant);
-            textPoint = GeomTool.calcCirclePoint(startAngle + sweepAngle / 2, radius + lableSpace + openWidth,
+            //选中状态，根据动画value 半径递增
+            textPoint = GeomTool.calcCirclePoint(startAngle + sweepAngle / 2, radius + lableSpace + openWidth + openWidth * openAnimationValue,
                     selectOval.centerX(), selectOval.centerY(), null);
             paint.setColor(Color.WHITE);
-            canvas.drawCircle(cx, cy, radius * centerCircleRadius - openWidth, paint);
+            //选中状态，根据动画value 半径递减
+            canvas.drawCircle(cx, cy, radius * centerCircleRadius - openWidth * openAnimationValue, paint);
         } else {
             paint.setColor(getResources().getColor(bean.getColor()));
             canvas.drawArc(normalOval, startAngle, sweepAngle, true, paint);
-            textPoint = GeomTool.calcCirclePoint(startAngle + sweepAngle / 2, radius + lableSpace,
+            textPoint = GeomTool.calcCirclePoint(startAngle + sweepAngle / 2, radius + lableSpace + openWidth,
                     normalOval.centerX(), normalOval.centerY(), null);
         }
         drawValue(canvas, bean, textPoint, quadrant);
         return bean;
+    }
+
+    //点击选中动画刷新
+    public void startSelectedAnimation() {
+        ValueAnimator open = ObjectAnimator.ofFloat(0.f, 1.f).setDuration(300);
+        open.setInterpolator(null);
+        open.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                openAnimationValue = (float) animation.getAnimatedValue();
+                postInvalidate();
+            }
+        });
+        open.start();
     }
 
     /**
@@ -143,6 +178,9 @@ public class PieGraphView extends View {
     private void drawCenterText(Canvas canvas, PieBean selecedBean) {
         mTextPaint.setColor(getResources().getColor(selecedBean.clickColor));
         String centerText = (int) selecedBean.value + "人\n" + selecedBean.lable;
+        if (centerValueFormatter != null) {
+            centerText = centerValueFormatter.valueFormatter(selecedBean.value, selecedBean.lable);
+        }
         SpannableString s = new SpannableString(centerText);
         s.setSpan(new ForegroundColorSpan(Color.GRAY), centerText.indexOf(selecedBean.lable), centerText.length(), 0);
         s.setSpan(new RelativeSizeSpan(0.9f), centerText.indexOf(selecedBean.lable), centerText.length(), 0);
@@ -162,10 +200,19 @@ public class PieGraphView extends View {
         canvas.restore();//别忘了restore
     }
 
+    //画value值
     private void drawValue(Canvas canvas, PieBean bean, Point textPoint, int quadrant) {
-        //画value
-        paint.setColor(Color.BLACK);
-        String value = (int) (bean.value / total * 100) + "%";
+        if (bean.value <= 0) {
+            return;
+        }
+        paint.setColor(getResources().getColor(R.color.fourth_text_color));
+        maxValue += (int) (bean.value / total * 100);
+        //保证所有value加起来为100%
+        String value;
+        if (index == parent.childs.size() - 1 && maxValue < 100) {
+            value = (int) (bean.value / total * 100) + (100 - maxValue) + "%";
+        } else
+            value = (int) (bean.value / total * 100) + "%";
         float ascent = Math.abs(paint.ascent());
         switch (quadrant) {
             case 4:
@@ -188,6 +235,8 @@ public class PieGraphView extends View {
         }
         canvas.drawText(value, textPoint.x, textPoint.y, paint);
     }
+
+    //获得象限
 
     private int getQuadrant(float middle) {
         int quadrant = 1;
@@ -212,8 +261,8 @@ public class PieGraphView extends View {
         float left = 0;
         switch (quadrant) {
             case 4:
-                top = (float) (Math.sin(Math.toRadians(middle)) * openWidth);
-                left = (float) (Math.cos(Math.toRadians(middle)) * openWidth);
+                top = (float) (Math.sin(Math.toRadians(middle)) * openWidth * openAnimationValue);
+                left = (float) (Math.cos(Math.toRadians(middle)) * openWidth * openAnimationValue);
                 left = top = Math.max(left, top);
                 selectOval.left -= left;
                 selectOval.right += left;
@@ -222,8 +271,8 @@ public class PieGraphView extends View {
                 break;
             case 3:
                 middle = 180 - middle;
-                top = (float) (Math.sin(Math.toRadians(middle)) * openWidth);
-                left = (float) (Math.cos(Math.toRadians(middle)) * openWidth);
+                top = (float) (Math.sin(Math.toRadians(middle)) * openWidth * openAnimationValue);
+                left = (float) (Math.cos(Math.toRadians(middle)) * openWidth * openAnimationValue);
                 left = top = Math.max(left, top);
                 selectOval.left -= left;
                 selectOval.right += left;
@@ -232,8 +281,8 @@ public class PieGraphView extends View {
                 break;
             case 2:
                 middle = 270 - middle;
-                left = (float) (Math.sin(Math.toRadians(middle)) * openWidth);
-                top = (float) (Math.cos(Math.toRadians(middle)) * openWidth);
+                left = (float) (Math.sin(Math.toRadians(middle)) * openWidth * openAnimationValue);
+                top = (float) (Math.cos(Math.toRadians(middle)) * openWidth * openAnimationValue);
                 left = top = Math.max(left, top);
                 selectOval.left -= left;
                 selectOval.right += left;
@@ -242,8 +291,8 @@ public class PieGraphView extends View {
                 break;
             case 1:
                 middle = 360 - middle;
-                left = (float) (Math.sin(Math.toRadians(middle)) * openWidth);
-                top = (float) (Math.cos(Math.toRadians(middle)) * openWidth);
+                left = (float) (Math.sin(Math.toRadians(middle)) * openWidth * openAnimationValue);
+                top = (float) (Math.cos(Math.toRadians(middle)) * openWidth * openAnimationValue);
                 left = top = Math.max(left, top);
                 selectOval.left -= left;
                 selectOval.right += left;
@@ -281,14 +330,16 @@ public class PieGraphView extends View {
             //判断点是否在扇形内
             float clickAngle = GeomTool.calcAngle(x, y, cx, cy);
             float clickRadius = GeomTool.calcDistance(x, y, cx, cy);
-            for (int i = 0; i < datas.get(parentIndex).childs.size(); i++) {
-                PieBean point = datas.get(parentIndex).childs.get(i);
-                if (point.startAngle <= clickAngle && point.endAngle >= clickAngle && clickRadius < radius) {
-                    select = i;
-                    if (mOnValueSelectedListener != null)
-                        mOnValueSelectedListener.valueSelected(select);
-                    invalidate();
-                    return true;
+            if (datas != null && datas.size() > parentIndex) {
+                for (int i = 0; i < datas.get(parentIndex).childs.size(); i++) {
+                    PieBean point = datas.get(parentIndex).childs.get(i);
+                    if (point.startAngle <= clickAngle && point.endAngle >= clickAngle && clickRadius < radius) {
+                        select = i;
+                        startSelectedAnimation();
+                        if (mOnValueSelectedListener != null)
+                            mOnValueSelectedListener.valueSelected(select);
+                        return true;
+                    }
                 }
             }
             return true;
@@ -299,7 +350,15 @@ public class PieGraphView extends View {
     private OnValueSelectedListener mOnValueSelectedListener;
 
     public void setSelect(int select) {
+        setSelected(select, true);
+    }
+
+    public void setSelected(int select, boolean startAnimation) {
         this.select = select;
+        if (startAnimation)
+            startSelectedAnimation();
+        else
+            postInvalidate();
     }
 
     public interface OnValueSelectedListener {

@@ -38,7 +38,6 @@
             android:id="@+id/lineChart"
             android:layout_width="match_parent"
             android:layout_height="210dp"
-            android:layout_marginLeft="20dp"
             android:paddingBottom="16dp"
             app:chartItemSpace="30px"
             app:chartTextSize="13dp"

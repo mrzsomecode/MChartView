@@ -6,7 +6,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.PathEffect;
 import android.graphics.Point;
 import android.util.AttributeSet;
@@ -26,7 +25,7 @@ import java.util.List;
  */
 
 public class RadoView extends BaseChartView<ChartBean> {
-
+    protected Point point = new Point();
     private int count = 5;                //维度个数
     private float angle = (float) (Math.PI * 2 / count);
     private float radius = -1;                   //网格最大半径
@@ -45,8 +44,8 @@ public class RadoView extends BaseChartView<ChartBean> {
     private float bottomNumberPadding = 14;
     private float textHeight = 0;
 
-    @BasePath.RegioPath
-    private int regionPath = BasePath.LINE;
+    private BasePath regionPath;
+    private int pathType = BasePath.LINE;
 
     /**
      * {@link BasePath#LINE,BasePath#ARC}
@@ -54,7 +53,7 @@ public class RadoView extends BaseChartView<ChartBean> {
      * @param pathType
      */
     public void setRegioPath(@BasePath.RegioPath int pathType) {
-        this.regionPath = pathType;
+        this.pathType = pathType;
     }
 
     @Override
@@ -129,6 +128,12 @@ public class RadoView extends BaseChartView<ChartBean> {
         centerY = (int) (h - getPaddingTop() - getPaddingBottom() - radius - bottomExplainH);
         textMaxW = mPaint.measureText(maxValue + "");
         mRatioStartX = getWidth() - getPaddingRight() - 20 - textMaxW - mRatioW;
+        //直线边还是弧线边
+        if (pathType == BasePath.LINE) {
+            regionPath = new LinePath();
+        } else {
+            regionPath = new ArcPath(centerX, centerY, angle);
+        }
         //如果圆会超过比例尺，就减去,然后重新计算控件高度
         if (centerX + radius > mRatioStartX) {
             radius -= centerX + radius - mRatioStartX;
@@ -194,7 +199,7 @@ public class RadoView extends BaseChartView<ChartBean> {
      * 绘制直线
      */
     private void drawLines(Canvas canvas, int i) {
-        Path path = new Path();
+        path.reset();
         path.moveTo(centerX, centerY);
         Point point = getPoint(i);
         path.lineTo(point.x, point.y);
@@ -202,7 +207,6 @@ public class RadoView extends BaseChartView<ChartBean> {
     }
 
     public Point getPoint(int position) {
-        Point point = new Point();
         point.x = (int) (centerX + radius * Math.cos(getAngle(position)));
         point.y = (int) (centerY + radius * Math.sin(getAngle(position)));
         return point;
@@ -301,19 +305,14 @@ public class RadoView extends BaseChartView<ChartBean> {
      * @param item
      */
     private void drawRegion(Canvas canvas, ArrayList<ChartBean> item) {
-        BasePath path;
-        if (regionPath == BasePath.LINE) {
-            path = new LinePath();
-        } else {
-            path = new ArcPath(centerX, centerY, angle);
-        }
+        regionPath.reset();
         for (int i = 0; i < item.size(); i++) {
             double percent = item.get(i).getValue() / ((maxValue - interval) * 1.0);
             float x = (float) (centerX + radius * Math.cos(getAngle(i)) * percent * animationValue);
             float y = (float) (centerY + radius * Math.sin(getAngle(i)) * percent * animationValue);
-            path.draw(x, y, i + 1, item.size(), canvas);
+            regionPath.draw(x, y, i + 1, item.size(), canvas);
         }
-        canvas.drawPath(path, mChartPaint);
+        canvas.drawPath(regionPath, mChartPaint);
     }
 
 }
