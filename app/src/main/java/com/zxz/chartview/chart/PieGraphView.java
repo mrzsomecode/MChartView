@@ -209,7 +209,7 @@ public class PieGraphView extends View {
         if (bean.value <= 0) {
             return;
         }
-        paint.setColor(getResources().getColor(R.color.fourth_text_color));
+        paint.setColor(getResources().getColor(R.color.third_text_color));
         float ascent = Math.abs(paint.ascent());
         switch (quadrant) {
             case 4:

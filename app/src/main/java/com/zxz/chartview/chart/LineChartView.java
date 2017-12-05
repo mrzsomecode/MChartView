@@ -8,7 +8,6 @@ import android.graphics.Paint;
 import android.graphics.Shader;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
-import android.util.Log;
 
 import com.zxz.chartview.R;
 import com.zxz.chartview.chart.bean.ChartBean;
@@ -29,7 +28,7 @@ public class LineChartView extends MChartView {
     private String xLable = "作业记录点";
     //item最小间距
     private float minSpace = 4.f;
-    private boolean scrollEnd;
+    private boolean smoothScroll;
 
     public void setyLable(String yLable) {
         this.yLable = yLable;
@@ -82,28 +81,17 @@ public class LineChartView extends MChartView {
         setDatas(datas, true);
     }
 
-    public void setDatas(List<ChartBean> datas, boolean scrollEnd) {
+    public void setDatas(List<ChartBean> datas, boolean smoothScroll) {
         this.datas = datas;
-        this.scrollEnd = scrollEnd;
+        this.smoothScroll = smoothScroll;
+        this.offsetTouch = 0;
         initMax();
-//        if (scrollEnd) {
-//            post(new Runnable() {
-//                @Override
-//                public void run() {
-//                    getChartStartX(getMaxChildCount());
-//                    startAnimation();
-//                }
-//            });
-//        } else {
-//            startAnimation();
-//        }
         startAnimation();
     }
 
     private float getChartStartX(int position) {
         float chartStartX = startX + itemSpace - offsetTouch;
-        if (scrollEnd) {
-            Log.e(TAG, "getChartStartX: " + position);
+        if (smoothScroll) {
             for (int i = 0; i <= position; i++) {
                 if (chartStartX + itemSpace + itemWidth + offsetTouch > getWidth() - getPaddingRight()) {
                     if (i == position) {
@@ -111,7 +99,7 @@ public class LineChartView extends MChartView {
                         outWidth = (int) (chartStartX + itemSpace + itemWidth + offsetTouch - (getWidth() - getPaddingRight()));
                         offsetTouch = outWidth;
                         if (position == getMaxChildCount() - 1)
-                            scrollEnd = false;
+                            smoothScroll = false;
                     }
                 }
                 chartStartX += itemSpace + itemWidth;
@@ -149,7 +137,7 @@ public class LineChartView extends MChartView {
 
     @Override
     protected void drawLines(Canvas canvas) {
-        mPaint.setColor(getResources().getColor(R.color.fourth_text_color));
+        mPaint.setColor(getResources().getColor(R.color.app_main_txt_color));
         //y轴文字
         canvas.drawText(yLable, getPaddingLeft(), getPaddingTop() + textSize, mPaint);
         mPaint.setColor(Color.GRAY);
@@ -176,7 +164,7 @@ public class LineChartView extends MChartView {
                 path.moveTo(startX, startY);
                 path.lineTo(getWidth() - getPaddingRight(), startY);
                 canvas.drawPath(path, mPaint);
-                mPaint.setColor(getResources().getColor(R.color.fourth_text_color));
+                mPaint.setColor(getResources().getColor(R.color.app_main_txt_color));
                 canvas.drawText(xLable, getWidth() - getPaddingRight() - mPaint.measureText(xLable),
                         startY + Math.abs(mPaint.ascent()) + describeTextPadding, mPaint);
             } else
@@ -195,7 +183,6 @@ public class LineChartView extends MChartView {
             mPaint.setColor(selectIndex == i ? getResources().getColor(R.color.fourth_text_color) : lineColor);
             int max = (int) (childsCount * animationValue);
             float chartStartX = getChartStartX(max);
-            Log.e(TAG, "drawContent: " + max);
             for (int j = 0; j < max; j++) {
                 //最后一个，超出去了就是最大滑动距离
                 if (i == datas.size() - 1 && chartStartX + itemSpace + itemWidth + offsetTouch > getWidth() - getPaddingRight()) {

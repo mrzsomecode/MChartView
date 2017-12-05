@@ -53,6 +53,11 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     public PathEffect mEffects;
     public ValueAnimator mValueAnimator;
     private int animationDuration = 1000;
+    private int minInterval = 5;
+
+    public void setMinInterval(int minInterval) {
+        this.minInterval = minInterval;
+    }
 
     public void setAnimationDuration(int animationValue) {
         this.animationDuration = animationValue;
@@ -121,9 +126,9 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     protected void resetMax(float tempMax) {
         float tempInterval = 0;
         maxValue = (int) tempMax;
-        while ((tempMax / (lineCount - 1)) % 2 != 0) {
+        while ((tempMax / (lineCount - 1)) % minInterval != 0) {
             tempInterval = (tempMax / lineCount);
-            if (tempInterval % 2 == 0 && canOut) {
+            if (tempInterval % minInterval == 0 && canOut) {
                 if (tempMax - maxValue > 0) {
                     interval = (int) Math.ceil(tempMax / (lineCount));
                     maxValue = interval * lineCount;

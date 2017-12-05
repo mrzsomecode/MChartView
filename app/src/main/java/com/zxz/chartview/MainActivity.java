@@ -47,6 +47,7 @@ public class MainActivity extends Activity {
         mLineChart.setAnimationDuration(5000);
         mRadoView.setBottomExplainStr(bottomExplainStr);
         mRadoView.showTopDescribe(true);
+        mRadoView.setMinInterval(3);
         mRadoView.showBottomDescribe(true);
         mRadoView.setShowRatio(true);
 //        mRadoView.setRegioPath(BasePath.LINE);
