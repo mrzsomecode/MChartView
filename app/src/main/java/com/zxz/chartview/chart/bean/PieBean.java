@@ -13,6 +13,7 @@ public class PieBean implements ICharData {
     @ColorRes
     public int clickColor;
     public float value;
+    public String formatValue;
     public String lable;
     public float startAngle;
     public float endAngle;
@@ -30,7 +31,7 @@ public class PieBean implements ICharData {
         this.lable = lable;
     }
 
-    public PieBean(String lable, @ColorRes int color, @ColorRes int clickColor, int value) {
+    public PieBean(String lable, @ColorRes int color, @ColorRes int clickColor, float value) {
         this.lable = lable;
         this.defColor = color;
         this.clickColor = clickColor;
@@ -54,6 +55,10 @@ public class PieBean implements ICharData {
     @Override
     public float getValue() {
         return value;
+    }
+
+    public String getFormaterValue() {
+        return formatValue;
     }
 
     @Override

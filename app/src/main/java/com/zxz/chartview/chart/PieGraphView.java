@@ -54,7 +54,6 @@ public class PieGraphView extends View {
     private ValueFormatter centerValueFormatter;
 
     private int maxValue;//所有百分比加起来
-    int index;//当前画到第几个
     PieBean parent;//父节点是那个
 
     public void setCenterValueFormatter(ValueFormatter centerValueFormatter) {
@@ -101,7 +100,6 @@ public class PieGraphView extends View {
         super.onDraw(canvas);
         if (datas != null && datas.size() > 0) {
             maxValue = 0;
-            index = 0;
             float startAngle = 0;
             float sweepAngle = 0;
             parent = datas.get(parentIndex);
@@ -114,13 +112,19 @@ public class PieGraphView extends View {
                 }
                 mPieBean.startAngle = startAngle;
                 mPieBean.endAngle = startAngle + sweepAngle;
+                maxValue += (int) (mPieBean.value / total * 100);
+                //保证所有value加起来为100%
+                String value;
+                if (i == parent.childs.size() - 1 && maxValue < 100) {
+                    value = (int) (mPieBean.value / total * 100) + (100 - maxValue) + "%";
+                } else
+                    value = (int) (mPieBean.value / total * 100) + "%";
+                mPieBean.formatValue = value;
                 if (i != select) {
-                    index++;
                     drawPieChar(canvas, mPieBean, false);
                 }
                 startAngle += sweepAngle;
             }
-            index++;
             paint.setColor(Color.WHITE);
             canvas.drawCircle(cx, cy, radius * centerCircleRadius, paint);
             PieBean selecedBean = parent.childs.get(select);
@@ -206,13 +210,6 @@ public class PieGraphView extends View {
             return;
         }
         paint.setColor(getResources().getColor(R.color.fourth_text_color));
-        maxValue += (int) (bean.value / total * 100);
-        //保证所有value加起来为100%
-        String value;
-        if (index == parent.childs.size() - 1 && maxValue < 100) {
-            value = (int) (bean.value / total * 100) + (100 - maxValue) + "%";
-        } else
-            value = (int) (bean.value / total * 100) + "%";
         float ascent = Math.abs(paint.ascent());
         switch (quadrant) {
             case 4:
@@ -233,7 +230,7 @@ public class PieGraphView extends View {
                     textPoint.y += ascent / 2;
                 break;
         }
-        canvas.drawText(value, textPoint.x, textPoint.y, paint);
+        canvas.drawText(bean.getFormaterValue(), textPoint.x, textPoint.y, paint);
     }
 
     //获得象限
@@ -307,9 +304,11 @@ public class PieGraphView extends View {
     public void setDatas(List<PieBean> numbers) {
         this.datas = numbers;
         total = 0;
-        for (PieBean bean : datas) {
-            for (PieBean child : bean.childs)
+        for (PieBean parent : datas) {
+            maxValue = 0;
+            for (PieBean child : parent.childs) {
                 total += child.value;
+            }
         }
         postInvalidate();
     }
@@ -359,6 +358,10 @@ public class PieGraphView extends View {
             startSelectedAnimation();
         else
             postInvalidate();
+    }
+
+    public int getSelected() {
+        return select;
     }
 
     public interface OnValueSelectedListener {

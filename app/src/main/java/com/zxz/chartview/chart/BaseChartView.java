@@ -12,7 +12,6 @@ import android.graphics.PathEffect;
 import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
@@ -52,8 +51,12 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     protected boolean showBottomDescribe = false;
     protected boolean canOut = false;
     public PathEffect mEffects;
+    public ValueAnimator mValueAnimator;
     private int animationDuration = 1000;
-    private ValueAnimator mValueAnimator;
+
+    public void setAnimationDuration(int animationValue) {
+        this.animationDuration = animationValue;
+    }
 
     public void showBottomDescribe(boolean show) {
         showBottomDescribe = show;
@@ -63,9 +66,6 @@ public abstract class BaseChartView<T extends ICharData> extends View {
         showTopDescribe = show;
     }
 
-    public void setAnimationDuration(int animationDuration) {
-        this.animationDuration = animationDuration;
-    }
 
     public BaseChartView(Context context) {
         this(context, null);
@@ -114,7 +114,6 @@ public abstract class BaseChartView<T extends ICharData> extends View {
                 tempMax = Math.max(tempMax, value.getValue());
             }
         }
-        Log.e(TAG, "initMax : " + tempItemWidth);
         itemWidth = tempItemWidth;
         resetMax(tempMax);
     }
@@ -122,15 +121,15 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     protected void resetMax(float tempMax) {
         float tempInterval = 0;
         maxValue = (int) tempMax;
-        while ((tempInterval = (tempMax / (lineCount - 1))) % 5 != 0) {
-            float tempInterval2 = (tempMax / lineCount);
-            if (tempInterval2 % 5 == 0 && canOut) {
+        while ((tempMax / (lineCount - 1)) % 2 != 0) {
+            tempInterval = (tempMax / lineCount);
+            if (tempInterval % 2 == 0 && canOut) {
                 if (tempMax - maxValue > 0) {
                     interval = (int) Math.ceil(tempMax / (lineCount));
                     maxValue = interval * lineCount;
                     return;
                 }
-            } else if (tempInterval2 == 1) {
+            } else if (tempInterval == 1) {
                 if (tempMax > maxValue || canOut) {
                     interval = (int) Math.ceil(tempMax / (lineCount));
                     maxValue = interval * lineCount;
@@ -185,7 +184,7 @@ public abstract class BaseChartView<T extends ICharData> extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         drawLines(canvas);
-        if (datas == null)
+        if (datas == null || datas.size() == 0)
             return;
         drawContent(canvas);
     }
@@ -194,7 +193,11 @@ public abstract class BaseChartView<T extends ICharData> extends View {
      * 画虚线
      */
     protected void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY) {
-        mPaint.setPathEffect(mEffects);
+        drawDashed(canvas, startX, endX, startY, endY, mEffects);
+    }
+
+    protected void drawDashed(Canvas canvas, float startX, float endX, float startY, float endY, PathEffect effects) {
+        mPaint.setPathEffect(effects);
         path.reset();
         path.moveTo(startX, startY);
         path.lineTo(endX, endY);

@@ -8,6 +8,7 @@ import android.graphics.Paint;
 import android.graphics.Shader;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.util.Log;
 
 import com.zxz.chartview.R;
 import com.zxz.chartview.chart.bean.ChartBean;
@@ -18,8 +19,9 @@ import java.util.List;
 /**
  * Created by zxz on 2017/8/15.
  */
-
 public class LineChartView extends MChartView {
+    private static final String TAG = "LineChartView";
+
     private boolean showLable = true;
     //数据圆点半径
     private float dotRadius = 12.f;
@@ -84,29 +86,32 @@ public class LineChartView extends MChartView {
         this.datas = datas;
         this.scrollEnd = scrollEnd;
         initMax();
-        if (scrollEnd) {
-            post(new Runnable() {
-                @Override
-                public void run() {
-                    getChartStartX(getMaxChildCount());
-                    startAnimation();
-                }
-            });
-        } else {
-            startAnimation();
-        }
+//        if (scrollEnd) {
+//            post(new Runnable() {
+//                @Override
+//                public void run() {
+//                    getChartStartX(getMaxChildCount());
+//                    startAnimation();
+//                }
+//            });
+//        } else {
+//            startAnimation();
+//        }
+        startAnimation();
     }
 
-    private float getChartStartX(int maxChildCount) {
+    private float getChartStartX(int position) {
         float chartStartX = startX + itemSpace - offsetTouch;
         if (scrollEnd) {
-            for (int i = 0; i < maxChildCount; i++) {
+            Log.e(TAG, "getChartStartX: " + position);
+            for (int i = 0; i <= position; i++) {
                 if (chartStartX + itemSpace + itemWidth + offsetTouch > getWidth() - getPaddingRight()) {
-                    if (i == maxChildCount - 1) {
+                    if (i == position) {
                         //最后一个，超出去了就是最大滑动距离
                         outWidth = (int) (chartStartX + itemSpace + itemWidth + offsetTouch - (getWidth() - getPaddingRight()));
                         offsetTouch = outWidth;
-                        scrollEnd = false;
+                        if (position == getMaxChildCount() - 1)
+                            scrollEnd = false;
                     }
                 }
                 chartStartX += itemSpace + itemWidth;
@@ -184,13 +189,13 @@ public class LineChartView extends MChartView {
         path.reset();
         //设置显示区域，超出宽度不显示,通过滑动显示
         canvas.clipRect(startX, 0, getWidth() - getPaddingRight(), getHeight());
-        int maxChildCount = getMaxChildCount();
         for (int i = 0; i < datas.size(); i++) {
             ChartBean item = datas.get(i);
             int childsCount = item.getChildDatas().size();
-            float chartStartX = getChartStartX(maxChildCount);
             mPaint.setColor(selectIndex == i ? getResources().getColor(R.color.fourth_text_color) : lineColor);
             int max = (int) (childsCount * animationValue);
+            float chartStartX = getChartStartX(max);
+            Log.e(TAG, "drawContent: " + max);
             for (int j = 0; j < max; j++) {
                 //最后一个，超出去了就是最大滑动距离
                 if (i == datas.size() - 1 && chartStartX + itemSpace + itemWidth + offsetTouch > getWidth() - getPaddingRight()) {

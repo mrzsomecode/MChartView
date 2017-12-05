@@ -15,7 +15,6 @@ public class ChartBean implements ICharData {
     public float value;
     public String lable;
     public ArrayList<ChartBean> childs;
-    public float startX;
 
     public ChartBean(String lable, ArrayList<ChartBean> childs) {
         this.childs = childs;

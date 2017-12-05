@@ -42,11 +42,14 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         mChartView = (MChartView) findViewById(R.id.chart_view);
         mLineChart = (LineChartView) findViewById(R.id.lineChart);
-        mLineChart.setAnimationDuration(50 * 200);
         mRadoView = (RadoView) findViewById(R.id.rado_view);
         value = (EditText) findViewById(R.id.value);
+        mLineChart.setAnimationDuration(5000);
         mRadoView.setBottomExplainStr(bottomExplainStr);
-        //mRadoView.setRegioPath(BasePath.LINE);
+        mRadoView.showTopDescribe(true);
+        mRadoView.showBottomDescribe(true);
+        mRadoView.setShowRatio(true);
+//        mRadoView.setRegioPath(BasePath.LINE);
         mRadoView.setRegioPath(BasePath.ARC);
     }
 
@@ -83,11 +86,10 @@ public class MainActivity extends Activity {
         for (int i = 0; i < titles2.length; i++) {
             ArrayList<ChartBean> radoChild = new ArrayList<>();
             for (int j = 1; j <= bottomExplainStr.length; j++) {
-                radoChild.add(new ChartBean("" + j, 0, 0, data));
+                radoChild.add(new ChartBean("" + j, 0, 0, random.nextInt(data + 20)));
             }
             radoDatas.add(new ChartBean(titles2[i], radoColors[i], radoChild));
         }
-
         mLineChart.setDatas(lineDatas);
         mChartView.setDatas(datas);
         mRadoView.setDatas(radoDatas);

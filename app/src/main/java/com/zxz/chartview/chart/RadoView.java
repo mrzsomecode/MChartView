@@ -9,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.PathEffect;
 import android.graphics.Point;
 import android.util.AttributeSet;
+import android.view.View;
 
 import com.zxz.chartview.R;
 import com.zxz.chartview.chart.bean.ChartBean;
@@ -46,6 +47,15 @@ public class RadoView extends BaseChartView<ChartBean> {
 
     private BasePath regionPath;
     private int pathType = BasePath.LINE;
+    private boolean showRatio = false;
+
+
+    /**
+     * 是否显示比例尺
+     */
+    public void setShowRatio(boolean showRatio) {
+        this.showRatio = showRatio;
+    }
 
     /**
      * {@link BasePath#LINE,BasePath#ARC}
@@ -58,8 +68,10 @@ public class RadoView extends BaseChartView<ChartBean> {
 
     @Override
     public void setDatas(List<ChartBean> datas) {
-        count = datas.get(0).getChildDatas().size();
-        angle = (float) (Math.PI * 2 / count);
+        if (datas != null && datas.size() > 0) {
+            count = datas.get(0).getChildDatas().size();
+            angle = (float) (Math.PI * 2 / count);
+        }
         super.setDatas(datas);
     }
 
@@ -92,8 +104,8 @@ public class RadoView extends BaseChartView<ChartBean> {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int specMode = MeasureSpec.getMode(heightMeasureSpec);
-        int specSize = MeasureSpec.getSize(heightMeasureSpec);
+        int specMode = View.MeasureSpec.getMode(heightMeasureSpec);
+        int specSize = View.MeasureSpec.getSize(heightMeasureSpec);
         int w = getDefaultSize(getSuggestedMinimumWidth(), widthMeasureSpec);
         int h = getDefaultSize(getSuggestedMinimumHeight(), heightMeasureSpec);
         textHeight = Math.abs(mPaint.ascent());
@@ -108,24 +120,33 @@ public class RadoView extends BaseChartView<ChartBean> {
         }
 
         switch (specMode) {
-            case MeasureSpec.EXACTLY:
+            case View.MeasureSpec.EXACTLY:
                 h = specSize;
                 break;
-            case MeasureSpec.UNSPECIFIED:
-            case MeasureSpec.AT_MOST:
-                //底部描述高度(bottomExplainH)，加上顶部描述高度(textHeight+describeTextPadding),再加上圆环维度标注数字的高度和间距(textHeight+itemSpace)
-                h = (int) (radius * 2 + bottomExplainH + textHeight + describeTextPadding + textHeight + itemSpace + getPaddingTop() + getPaddingBottom());
+            case View.MeasureSpec.UNSPECIFIED:
+            case View.MeasureSpec.AT_MOST:
+                mPaint.setTextSize(textSize);
+                //底部描述高度(bottomExplainH)，加上顶部描述高度(textHeight+describeTextPadding),
+                // 再加上圆环维度标注数字的高度和间距(textHeight+itemSpace+mPaint.descent)
+                h = (int) (radius * 2 + bottomExplainH + textHeight + describeTextPadding +
+                        textHeight + itemSpace + mPaint.descent()
+                        + getPaddingTop() + getPaddingBottom());
                 if (!showTopDescribe)
                     h -= textHeight + describeTextPadding;
+                if (!showBottomDescribe)
+                    h -= bottomExplainH;
                 break;
         }
         setMeasuredDimension(w, h);
+
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         centerX = (w - getPaddingLeft() - getPaddingRight()) / 2;
-        centerY = (int) (h - getPaddingTop() - getPaddingBottom() - radius - bottomExplainH);
+        centerY = (int) (h - getPaddingBottom() - radius);
+        if (showBottomDescribe)
+            centerY -= bottomExplainH;
         textMaxW = mPaint.measureText(maxValue + "");
         mRatioStartX = getWidth() - getPaddingRight() - 20 - textMaxW - mRatioW;
         //直线边还是弧线边
@@ -135,7 +156,7 @@ public class RadoView extends BaseChartView<ChartBean> {
             regionPath = new ArcPath(centerX, centerY, angle);
         }
         //如果圆会超过比例尺，就减去,然后重新计算控件高度
-        if (centerX + radius > mRatioStartX) {
+        if (showRatio && centerX + radius > mRatioStartX) {
             radius -= centerX + radius - mRatioStartX;
             requestLayout();
         } else
@@ -172,24 +193,28 @@ public class RadoView extends BaseChartView<ChartBean> {
     /**
      * 绘制圆环
      */
+
     private void drawCircle(Canvas canvas, int i) {
         if (i > 0) {
             //每个圆环的半径
             float r = radius / (count - 1);
             float curR = r * i;
+            PathEffect effects = null;
             if (i < count - 1) {
                 int interval = 20 - 5 * i;
-                PathEffect effects = new DashPathEffect(new float[]{interval, interval, interval, interval}, 0);
+                effects = new DashPathEffect(new float[]{interval, interval, interval, interval}, 0);
                 mPaint.setPathEffect(effects);
             }
             //比例尺
-            float ratioStartX = getWidth() - getPaddingRight() - 20 - textMaxW - mRatioW;
-            float ratioStartY = centerY + radius - (textHeight + 5) * (i - 1);
-            mPaint.setTextSize(textSize - 4);
-            canvas.drawText(i * interval + "", getWidth() - getPaddingRight() - textMaxW, ratioStartY + textHeight / 3, mPaint);
+            if (showRatio) {
+                float ratioStartX = getWidth() - getPaddingRight() - 20 - textMaxW - mRatioW;
+                float ratioStartY = centerY + radius - (textHeight + 5) * (i - 1);
+                mPaint.setTextSize(textSize - 4);
+                canvas.drawText(i * interval + "", getWidth() - getPaddingRight() - textMaxW, ratioStartY + textHeight / 3, mPaint);
+                drawDashed(canvas, ratioStartX, ratioStartX + mRatioW, ratioStartY, ratioStartY, effects);
+            }
             //圆环
             canvas.drawCircle(centerX, centerY, curR, mPaint);
-            drawDashed(canvas, ratioStartX, ratioStartX + mRatioW, ratioStartY, ratioStartY);
             mPaint.setTextSize(textSize);
         }
         mPaint.setPathEffect(null);
@@ -225,9 +250,14 @@ public class RadoView extends BaseChartView<ChartBean> {
         else maxCount = (float) Math.floor(maxCount);
         //底部描述参数
         //小于就是第一行
-        float bottomChartWidth = mPaint.measureText("5") + bottomNumberPadding;
-        float leftBottomWidth = mPaint.measureText(bottomExplainStr[0]) + bottomChartWidth;
-        float rightBottomWidth = bottomExplainStr.length > 3 ? mPaint.measureText(bottomExplainStr[3]) + bottomChartWidth : leftBottomWidth;
+        float bottomChartWidth = 0;
+        float leftBottomWidth = 0;
+        float rightBottomWidth = 0;
+        if (showBottomDescribe && bottomExplainStr != null) {
+            bottomChartWidth = mPaint.measureText("5") + bottomNumberPadding;
+            leftBottomWidth = mPaint.measureText(bottomExplainStr[0]) + bottomChartWidth;
+            rightBottomWidth = bottomExplainStr.length > 3 ? mPaint.measureText(bottomExplainStr[3]) + bottomChartWidth : leftBottomWidth;
+        }
         float bottomItemW = 0;
         float btStartX = getPaddingLeft();
         float bottomStartY = centerY + radius + textHeight * 3;
@@ -243,7 +273,7 @@ public class RadoView extends BaseChartView<ChartBean> {
             float y = point.y;
             float dis = mPaint.measureText(key);//文本长度
             if (curA == -Math.PI / 2) {
-                canvas.drawText(key, x - dis / 2, y - itemSpace, mPaint);
+                canvas.drawText(key, x - dis / 2, y - itemSpace - mPaint.descent(), mPaint);
             } else if (curA >= 0 && curA <= Math.PI / 2) {//第4象限
                 canvas.drawText(key, x, y + textHeight + itemSpace, mPaint);
             } else if (curA >= Math.PI / 2 && curA <= Math.PI) {//第3象限
@@ -253,42 +283,44 @@ public class RadoView extends BaseChartView<ChartBean> {
             } else if (curA <= 0 && curA > -Math.PI / 2) {//第1象限
                 canvas.drawText(key, x + itemSpace, y, mPaint);
             }
-            //底部文字的宽度
-            float bottomStrWidth = mPaint.measureText(bottomExplainStr[i]);
-            float offset = 0;
-            switch ((int) ((i + 1) % maxCount)) {
-                case 1:
-                    //第一个 靠左,startX不变，有多宽占多宽
-                    bottomItemW = leftBottomWidth;
-                    break;
-                //中间2个 居中
-                case 2:
-                    bottomItemW = (trueWidth - leftBottomWidth - rightBottomWidth) / 2;
-                    offset = ((bottomItemW - bottomStrWidth - bottomChartWidth) / 2) * (4 / 3f);
-                    break;
-                case 3:
-                    bottomItemW = (trueWidth - leftBottomWidth - rightBottomWidth) / 2;
-                    offset = ((bottomItemW - bottomStrWidth - bottomChartWidth) / 2) * (2 / 3f);
-                    break;
-                //最后一个 靠右，有多宽占多宽
-                case 0:
-                    bottomItemW = rightBottomWidth;
-                    break;
+            if (showBottomDescribe) {
+                //底部文字的宽度
+                float bottomStrWidth = mPaint.measureText(bottomExplainStr[i]);
+                float offset = 0;
+                switch ((int) ((i + 1) % maxCount)) {
+                    case 1:
+                        //第一个 靠左,startX不变，有多宽占多宽
+                        bottomItemW = leftBottomWidth;
+                        break;
+                    //中间2个 居中
+                    case 2:
+                        bottomItemW = (trueWidth - leftBottomWidth - rightBottomWidth) / 2;
+                        offset = ((bottomItemW - bottomStrWidth - bottomChartWidth) / 2) * (4 / 3f);
+                        break;
+                    case 3:
+                        bottomItemW = (trueWidth - leftBottomWidth - rightBottomWidth) / 2;
+                        offset = ((bottomItemW - bottomStrWidth - bottomChartWidth) / 2) * (2 / 3f);
+                        break;
+                    //最后一个 靠右，有多宽占多宽
+                    case 0:
+                        bottomItemW = rightBottomWidth;
+                        break;
+                }
+                //换行了
+                if (i + 1 > maxCount) {
+                    btStartX -= trueWidth;
+                    bottomStartY += textHeight * 2;
+                    maxCount += maxCount;
+                }
+                float curStartX = btStartX + offset;
+                mChartPaint.setColor(getResources().getColor(R.color.app_main_color));
+                drawChart(curStartX, curStartX + bottomChartWidth, bottomStartY + 2, 5, textHeight + 4, 1f, canvas);
+                canvas.drawText(bottomExplainStr[i], curStartX + bottomChartWidth + bottomNumberPadding,
+                        bottomStartY - mPaint.descent() / 2, mPaint);
+                mPaint.setColor(Color.WHITE);
+                canvas.drawText((i + 1) + "", curStartX + (bottomChartWidth - mPaint.measureText(i + "")) / 2, bottomStartY - mPaint.descent() / 2, mPaint);
+                btStartX += bottomItemW;
             }
-            //换行了
-            if (i + 1 > maxCount) {
-                btStartX -= trueWidth;
-                bottomStartY += textHeight * 2;
-                maxCount += maxCount;
-            }
-            mChartPaint.setColor(getResources().getColor(R.color.app_main_color));
-            float curStartX = btStartX + offset;
-            drawChart(curStartX, curStartX + bottomChartWidth, bottomStartY + 2, 5, textHeight + 4, 1f, canvas);
-            canvas.drawText(bottomExplainStr[i], curStartX + bottomChartWidth + bottomNumberPadding,
-                    bottomStartY - mPaint.descent() / 2, mPaint);
-            mPaint.setColor(Color.WHITE);
-            canvas.drawText((i + 1) + "", curStartX + (bottomChartWidth - mPaint.measureText(i + "")) / 2, bottomStartY - mPaint.descent() / 2, mPaint);
-            btStartX += bottomItemW;
             i++;
         }
     }
@@ -311,6 +343,7 @@ public class RadoView extends BaseChartView<ChartBean> {
             float x = (float) (centerX + radius * Math.cos(getAngle(i)) * percent * animationValue);
             float y = (float) (centerY + radius * Math.sin(getAngle(i)) * percent * animationValue);
             regionPath.draw(x, y, i + 1, item.size(), canvas);
+            canvas.drawCircle(x, y, 5, mChartPaint);
         }
         canvas.drawPath(regionPath, mChartPaint);
     }
